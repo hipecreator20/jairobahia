@@ -1,0 +1,192 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and studio preferences for the single authorized owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "isOwner": { "type": "boolean" },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string", "enum": ["dark", "light"] },
+            "language": { "type": "string", "maxLength": 10 },
+            "defaultAspect": { "type": "string", "maxLength": 10 }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Creative visual project containing scenes, characters, and assets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "sceneCount": { "type": "number" },
+        "thumbnail": { "type": "string", "maxLength": 1024 },
+        "status": { "type": "string", "enum": ["active", "archived", "completed"] },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 50 }
+        },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Character": {
+      "title": "Character",
+      "description": "Digital influencer / AI character with visual DNA specifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "niche": { "type": "string", "maxLength": 64 },
+        "bio": { "type": "string", "maxLength": 1000 },
+        "visualDna": { "type": "string", "maxLength": 2000 },
+        "avatarUrl": { "type": "string", "maxLength": 1024 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "Narrative arc or storyboard script with connected scenes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "synopsis": { "type": "string", "maxLength": 2000 },
+        "characterIds": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 128 }
+        },
+        "sceneCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "in_progress", "completed"] },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Scene": {
+      "title": "Scene",
+      "description": "Individual scene inside a cinematic story",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "storyId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "prompt": { "type": "string", "maxLength": 2000 },
+        "visualStyle": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["draft", "ready", "rendered"] },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storyId", "title", "ownerId", "createdAt", "updatedAt"]
+    },
+    "ImageAsset": {
+      "title": "ImageAsset",
+      "description": "Metadata for an image asset generated or uploaded into the studio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "characterId": { "type": "string", "maxLength": 128 },
+        "prompt": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 2048 },
+        "storagePath": { "type": "string", "maxLength": 512 },
+        "aspect": { "type": "string", "maxLength": 20 },
+        "modelUsed": { "type": "string", "maxLength": 64 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "imageUrl", "ownerId", "createdAt", "updatedAt"]
+    },
+    "PromptVersion": {
+      "title": "PromptVersion",
+      "description": "Curated or optimized prompt for external AI video/image engines",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "platform": { "type": "string", "maxLength": 64 },
+        "content": { "type": "string", "maxLength": 4000 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 50 }
+        },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "ownerId", "createdAt", "updatedAt"]
+    },
+    "GenerationJob": {
+      "title": "GenerationJob",
+      "description": "Background generation job tracking state and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["queued", "processing", "completed", "failed"] },
+        "prompt": { "type": "string", "maxLength": 2000 },
+        "resultUrl": { "type": "string", "maxLength": 1024 },
+        "error": { "type": "string", "maxLength": 500 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "status", "ownerId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile and studio preferences"
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Projects created by the user"
+    },
+    "/characters/{characterId}": {
+      "schema": { "$ref": "#/entities/Character" },
+      "description": "AI Influencers and characters created by the user"
+    },
+    "/stories/{storyId}": {
+      "schema": { "$ref": "#/entities/Story" },
+      "description": "Stories created by the user"
+    },
+    "/scenes/{sceneId}": {
+      "schema": { "$ref": "#/entities/Scene" },
+      "description": "Story scenes created by the user"
+    },
+    "/imageAssets/{assetId}": {
+      "schema": { "$ref": "#/entities/ImageAsset" },
+      "description": "Visual image assets saved in the studio"
+    },
+    "/promptVersions/{promptId}": {
+      "schema": { "$ref": "#/entities/PromptVersion" },
+      "description": "Curated prompts exported or saved in prompt director"
+    },
+    "/generationJobs/{jobId}": {
+      "schema": { "$ref": "#/entities/GenerationJob" },
+      "description": "Tracking logs for generation jobs"
+    }
+  }
+}

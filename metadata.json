@@ -1,0 +1,6 @@
+{
+  "name": "Hype Creator Studio 2.0",
+  "description": "Seu universo criativo com inteligência artificial para influenciadores, imagens cinematográficas, histórias e prompts profissionais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
