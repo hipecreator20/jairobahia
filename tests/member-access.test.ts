@@ -5,6 +5,7 @@ import { getApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import config from '../firebase-applet-config.json' with { type: 'json' };
+import { walletView } from '../wallet.js';
 
 process.env.NODE_ENV = 'test';
 delete process.env.GEMINI_API_KEY;
@@ -18,17 +19,18 @@ const { app } = await import('../server.js');
 
 test('approved second account reaches every AI route; pending and exhausted accounts remain blocked', async () => {
   let status = 'approved';
-  let count = 0;
+  let spent = 0;
+  const subscription={plan:'pro',status:'paid',startedAt:Date.now()-1000,endsAt:Date.now()+86400000};
+  const ledgers=new Set<string>();
   const auth = getAuth(getApp());
   const store = getFirestore(getApp(), config.firestoreDatabaseId);
   mock.method(auth, 'verifyIdToken', async () => ({ uid: 'second-account', email: 'member@example.invalid', email_verified: true }));
-  mock.method(store, 'collection', (name: string) => ({
-    doc: () => ({ get: async () => ({ exists: true, data: () => ({ status, plan: 'free' }) }) }),
-    add: async () => ({}),
-  }));
-  mock.method(store, 'doc', () => ({ get: async () => ({ data: () => ({ plans: { free: { promptsPerMonth: 10 } } }) }) }));
+  const snapshot=(path:string)=>path.startsWith('studioAccounts/') && !path.includes('/ledger/') ? {exists:true,data:()=>({subscription,wallet:{period:walletView({subscription}).period,spent}})} : path.includes('/ledger/') ? {exists:ledgers.has(path),data:()=>({})} : {exists:true,data:()=>({status,plan:'pro'})};
+  const ref=(path:string):any=>({path,get:async()=>snapshot(path),set:async()=>{},collection:(name:string)=>({doc:(id:string)=>ref(`${path}/${name}/${id}`)})});
+  mock.method(store, 'collection', (name: string) => ({doc:(id:string)=>ref(`${name}/${id}`),add:async()=>({})}));
+  mock.method(store, 'doc', (path:string) => ref(path));
   mock.method(store, 'runTransaction', async (callback: (tx: unknown) => unknown) => callback({
-    get: async () => ({ data: () => ({ count }) }), set: () => { count++; },
+    get: async (record:any) => snapshot(record.path), set: (record:any,value:any) => {if(value.wallet)spent=value.wallet.spent;if(record.path.includes('/ledger/'))ledgers.add(record.path);},
   }));
   const server = app.listen(0, '127.0.0.1');
   await new Promise<void>(resolve => server.once('listening', resolve));
@@ -47,11 +49,11 @@ test('approved second account reaches every AI route; pending and exhausted acco
       // Reaches the unconfigured provider boundary, never the obsolete owner-email rejection.
       assert.notEqual(response.status, 403, `${path}: ${data.message}`);
       assert.equal(data.success, false);
-      assert.match(data.message, /GEMINI_API_KEY|GoogleGenAI/);
+      assert.match(data.message, /GEMINI_API_KEY|GoogleGenAI|IA indisponível/);
     }
     status = 'pending';
     assert.equal((await request('generate-prompt', { subject: 'test' })).status, 403);
-    status = 'approved'; count = 10;
+    status = 'approved'; spent = 1000000;
     assert.equal((await request('generate-prompt', { subject: 'test' })).status, 429);
   } finally {
     mock.restoreAll();

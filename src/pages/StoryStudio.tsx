@@ -24,6 +24,7 @@ import { Story, Scene, Character } from '../types';
 import {
   subscribeStories,
   createStory,
+  saveStorySequence,
   updateStory,
   deleteStory,
   subscribeScenes,
@@ -39,6 +40,12 @@ import {
   GeneratedStoryScriptResult,
 } from '../services/geminiService';
 import { CinematicTimeline } from '../components/story/CinematicTimeline';
+import { ReferenceImageInput, ReferenceImage } from '../components/common/ReferenceImageInput';
+import { loadReference, rememberReference, persistReference } from '../services/mediaService';
+import { getWallet } from '../services/billingService';
+import { AudioSyncPanel } from '../components/story/AudioSyncPanel';
+import type { AudioCue } from '../../audio-sync';
+import { audioInstructions } from '../../audio-sync';
 
 const GENRES = [
   'Cinematográfico & Drama',
@@ -80,7 +87,12 @@ export const StoryStudio: React.FC = () => {
   const [format, setFormat] = useState(FORMATS[0].label);
   const [tone, setTone] = useState(TONES[0]);
   const [selectedCharNames, setSelectedCharNames] = useState<string[]>([]);
-  const [sceneCount, setSceneCount] = useState(4);
+  const [sceneCount, setSceneCount] = useState(6);
+  const [clipDuration,setClipDuration] = useState(8);
+  const [platform,setPlatform] = useState('Flow');
+  const [draftReference,setDraftReference] = useState<ReferenceImage|null>(null);
+  const [storyReferences,setStoryReferences] = useState<Record<string,ReferenceImage>>({});
+  const [audioCues,setAudioCues] = useState<AudioCue[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -92,7 +104,7 @@ export const StoryStudio: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [newSceneTitle, setNewSceneTitle] = useState('');
   const [newScenePrompt, setNewScenePrompt] = useState('');
-  const [newSceneDuration, setNewSceneDuration] = useState(5);
+  const [newSceneDuration, setNewSceneDuration] = useState(8);
   const [newSceneVisualStyle, setNewSceneVisualStyle] = useState('');
   const [isAddingScene, setIsAddingScene] = useState(false);
   const [storyDisplayMode, setStoryDisplayMode] = useState<'timeline' | 'cards' | 'both'>('both');
@@ -109,6 +121,16 @@ export const StoryStudio: React.FC = () => {
   }, [user]);
 
   // Subscribe to scenes when a story is active
+  useEffect(()=>{
+    const id=selectedCharNames[0];if(!id)return;let alive=true;
+    void loadReference({kind:'characters',id}).then(ref=>{if(alive && ref)setDraftReference(current=>current || ref);}).catch(()=>{});
+    return()=>{alive=false;};
+  },[selectedCharNames[0]]);
+  useEffect(()=>{
+    const timer = window.setInterval(()=>setStoryReferences(current=>Object.fromEntries(Object.entries(current).filter(([,ref])=>ref.expiresAt > Date.now()))),60_000);
+    return ()=>window.clearInterval(timer);
+  },[]);
+
   useEffect(() => {
     if (!user || !selectedStory) {
       setScenes([]);
@@ -152,34 +174,33 @@ export const StoryStudio: React.FC = () => {
         genre,
         format,
         tone,
-        characterNames: selectedCharNames,
+        characterIds: selectedCharNames,
         sceneCount,
+        clipDuration,
+        platform,
+        referenceImage: draftReference?.dataUrl,
         userEmail: user.email || '',
       });
 
       // Save story to Firestore
-      const newStory = await createStory({
+      const newStory = await saveStorySequence({
         title: generated.title || 'História Sem Título',
         synopsis: `${generated.logline}\n\n${generated.synopsis}`.slice(0, 2000),
-        sceneCount: generated.scenes.length,
-        status: 'in_progress',
+        characterIds: selectedCharNames,
+        duration: clipDuration,
+        scenes: generated.scenes,
         ownerId: user.uid,
       });
-
-      // Save each scene to Firestore with default duration of 5s formatted in visualStyle
-      for (const s of generated.scenes) {
-        await createScene({
-          storyId: newStory.id,
-          title: s.title || `Cena ${s.sceneNumber}`,
-          prompt: s.prompt || '',
-          visualStyle: formatVisualStyleWithDuration(s.visualStyle || genre, 5),
-          status: 'ready',
-          ownerId: user.uid,
-        });
+      if (draftReference) {
+        const binding={kind:'stories' as const,id:newStory.id};rememberReference(binding,draftReference);
+        let ref=draftReference;
+        try{if((await getWallet()).mediaEnabled)ref=await persistReference(binding,draftReference);}catch{console.warn('História salva; referência mantida temporariamente.');}
+        setStoryReferences(current=>({...current,[newStory.id]:ref}));
       }
 
       // Switch view to the new story
       setSelectedStory(newStory);
+      setAudioCues([]);
       setActiveTab('historias');
       setPremise('');
     } catch (err: any) {
@@ -263,7 +284,7 @@ ${scenes
 ESTILO VISUAL: ${scene.visualStyle || 'Padrão Cinematográfico'}
 
 PROMPT CINEMATOGRÁFICO (PARA MIDJOURNEY / GOOGLE FLOW / KLING / RUNWAY):
-${scene.prompt || 'Sem prompt cadastrado.'}
+${scene.prompt || 'Sem prompt cadastrado.'}${audioInstructions(audioCues,scenes.slice(0,idx).reduce((sum,item)=>sum+parseSceneDuration(item.visualStyle),0)*1000,parseSceneDuration(scene.visualStyle)*1000)}
 
 --------------------------------------------------`
   )
@@ -336,6 +357,9 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
       {/* View Mode: Single Story Screenplay Editor */}
       {selectedStory ? (
         <div className="space-y-6">
+          <ReferenceImageInput binding={{kind:'stories',id:selectedStory.id}} label="Primeira imagem: referência comum a todas as cenas" value={storyReferences[selectedStory.id] || null} onChange={value=>setStoryReferences(current=>{const next={...current};if(value)next[selectedStory.id]=value;else delete next[selectedStory.id];return next;})} />
+          <AudioSyncPanel storyId={selectedStory.id} onChange={setAudioCues} />
+          <p className="text-xs text-zinc-400">Baixe e anexe a mesma referência em cada clipe no gerador externo. Cada prompt inclui o DNA fixo e começa no estado final da cena anterior.</p>
           {/* Back button and action bar */}
           <div className="flex items-center justify-between gap-3 bg-[#141414] border border-[#222] p-4 rounded-2xl">
             <button
@@ -444,6 +468,7 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
             <CinematicTimeline
               story={selectedStory}
               scenes={scenes}
+              audioCues={audioCues}
               ownerId={user?.uid || ''}
               onAddNewScene={() => setIsAddingScene(true)}
             />
@@ -734,10 +759,13 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
                   <option value={4}>4 Cenas (Estrutura Padrão)</option>
                   <option value={5}>5 Cenas (Arco Expandido)</option>
                   <option value={6}>6 Cenas (Completo com Clímax)</option>
+                  {[7,8,9,10,11,12].map(count=><option key={count} value={count}>{count} cenas contínuas</option>)}
                 </select>
               </div>
             </div>
 
+            <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs text-zinc-400">Gerador de destino<select value={platform} onChange={e=>setPlatform(e.target.value)} className="mt-1 block w-full rounded-lg bg-zinc-900 p-3 text-white">{['Flow','Kling','Runway','Midjourney','Flux','Outro'].map(p=><option key={p}>{p}</option>)}</select></label><label className="text-xs text-zinc-400">Segundos por cena<input type="number" min={4} max={15} value={clipDuration} onChange={e=>setClipDuration(Number(e.target.value))} className="mt-1 block w-full rounded-lg bg-zinc-900 p-3 text-white"/></label></div>
+            <ReferenceImageInput value={draftReference} onChange={setDraftReference} disabled={isGenerating} label="Upload da primeira imagem para guiar a sequência" />
             {/* Characters to link */}
             {characters.length > 0 && (
               <div>
@@ -747,12 +775,12 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {characters.map((char) => {
-                    const isSelected = selectedCharNames.includes(char.name);
+                    const isSelected = selectedCharNames.includes(char.id);
                     return (
                       <button
                         key={char.id}
                         type="button"
-                        onClick={() => handleToggleCharacter(char.name)}
+                        disabled={!isSelected && selectedCharNames.length >= 3} onClick={() => handleToggleCharacter(char.id)}
                         className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-[#1C1C14] border-[#DFFF00] text-[#DFFF00]'

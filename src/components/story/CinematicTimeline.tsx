@@ -21,6 +21,9 @@ import {
   Layers,
 } from 'lucide-react';
 import { Story, Scene } from '../../types';
+import { editableSceneAction, updateSceneAction } from '../../../story-continuity';
+import { audioInstructions } from '../../../audio-sync';
+import type { AudioCue } from '../../../audio-sync';
 import {
   updateScene,
   duplicateScene,
@@ -33,6 +36,7 @@ import {
 interface CinematicTimelineProps {
   story: Story;
   scenes: Scene[];
+  audioCues?: AudioCue[];
   ownerId: string;
   onSelectScene?: (scene: Scene) => void;
   onAddNewScene: () => void;
@@ -41,6 +45,7 @@ interface CinematicTimelineProps {
 export const CinematicTimeline: React.FC<CinematicTimelineProps> = ({
   story,
   scenes,
+  audioCues = [],
   ownerId,
   onSelectScene,
   onAddNewScene,
@@ -95,7 +100,9 @@ export const CinematicTimeline: React.FC<CinematicTimelineProps> = ({
 
   const handleDuplicateScene = async (scene: Scene) => {
     try {
-      await duplicateScene(scene, ownerId);
+      const duplicated = await duplicateScene(scene, ownerId);
+      const index = scenes.findIndex(item=>item.id === scene.id);
+      await reorderScenes([...scenes.slice(0,index+1),duplicated,...scenes.slice(index+1)],ownerId);
       await updateStory(story.id, {
         ownerId,
         sceneCount: scenes.length + 1,
@@ -109,7 +116,7 @@ export const CinematicTimeline: React.FC<CinematicTimelineProps> = ({
   const handleOpenEdit = (scene: Scene) => {
     setActiveEditingScene(scene);
     setEditTitle(scene.title);
-    setEditPrompt(scene.prompt || '');
+    setEditPrompt(editableSceneAction(scene.prompt || ''));
     setEditDuration(parseSceneDuration(scene.visualStyle));
     setEditVisualStyle(
       (scene.visualStyle || 'Cinematográfico').replace(/\s*\[\d+s\]|\s*·\s*\d+s/g, '').trim()
@@ -123,16 +130,13 @@ export const CinematicTimeline: React.FC<CinematicTimelineProps> = ({
     setIsSavingEdit(true);
     try {
       const updatedVisualStyle = formatVisualStyleWithDuration(editVisualStyle, editDuration);
-      await updateScene(activeEditingScene.id, {
-        ownerId,
-        title: editTitle.trim().slice(0, 128),
-        prompt: editPrompt.trim().slice(0, 2000),
-        visualStyle: updatedVisualStyle,
-      });
+      if (!editTitle.trim()) throw Error('Informe um título.');
+      const prompt = updateSceneAction(activeEditingScene.prompt || '', editPrompt.trim());
+      await reorderScenes(scenes.map(scene=>scene.id === activeEditingScene.id ? {...scene,title:editTitle.trim().slice(0,128),prompt,visualStyle:updatedVisualStyle} : scene),ownerId);
       setActiveEditingScene(null);
       showFeedback('Cena e duração atualizadas no Firebase!');
-    } catch {
-      alert('Falha ao salvar edição da cena.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Falha ao salvar edição da cena.');
     } finally {
       setIsSavingEdit(false);
     }
@@ -142,12 +146,13 @@ export const CinematicTimeline: React.FC<CinematicTimelineProps> = ({
     let accumulatedSec = 0;
     const lines = scenes.map((scene, idx) => {
       const dur = parseSceneDuration(scene.visualStyle);
+      const clipStartMs = accumulatedSec * 1000;
       const start = formatTime(accumulatedSec);
       const end = formatTime(accumulatedSec + dur);
       accumulatedSec += dur;
 
       return `[CENA ${idx + 1}] (${start} - ${end} | ${dur}s) — ${scene.title}
-PROMPT: ${scene.prompt || 'Sem prompt cadastrado'}
+PROMPT: ${(scene.prompt || 'Sem prompt cadastrado')}${audioInstructions(audioCues,clipStartMs,dur*1000)}
 --------------------------------------------------`;
     });
 

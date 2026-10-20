@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { CREATIVE_INTENT } from './story-continuity.js';
 
 const fields = ['title', 'masterPrompt', 'platformOptimized', 'portugueseTranslation', 'cameraSpecs', 'negativePrompt', 'recommendedPlatform'] as const;
 export type PromptResult = Record<typeof fields[number], string>;
@@ -10,7 +11,7 @@ export const promptSchema = {
 };
 
 function normalize(text: string): string {
-  return text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return text.replaceAll(CREATIVE_INTENT, '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 export function promptFingerprint(text: string): string {

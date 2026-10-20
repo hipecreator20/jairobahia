@@ -17,6 +17,7 @@ import { checkGeminiStatus, verifyGeminiLive, fetchSystemInfo, SystemConfigInfo 
 import { testFirestoreConnection } from '../firebase/config';
 import { updateUserPreferences } from '../firebase/services/userService';
 import { GeminiStatusInfo } from '../types';
+import { WalletPanel } from '../components/common/WalletPanel';
 
 export const Settings: React.FC = () => {
   const { user, profile } = useAuth();
@@ -139,6 +140,7 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12 max-w-5xl">
+      <WalletPanel />
       {saveError && <p role="alert" className="rounded-xl border border-red-900 p-4 text-sm text-red-300">{saveError}</p>}
       {/* Title */}
       <div>

@@ -1,6 +1,7 @@
 {
   "buildCommand": "npm run lint && npm test && npm run build",
   "outputDirectory": "dist",
+  "crons": [{"path":"/api/maintenance/expired-media","schedule":"0 3 * * *"}],
   "functions": {
     "api/index.ts": {
       "maxDuration": 60

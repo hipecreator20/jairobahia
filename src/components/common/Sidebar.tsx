@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { WalletPanel } from './WalletPanel';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -111,25 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
 
         {/* Bottom Quota & Help Widgets */}
         <div className="p-4 border-t border-[#1A1A1A] space-y-4">
-          {/* Storage quota widget matching mockup */}
-          <div className="bg-[#141414] border border-[#222222] rounded-xl p-3.5">
-            <div className="flex items-center justify-between text-xs mb-2">
-              <div className="flex items-center gap-2 text-zinc-300 font-medium">
-                <Cloud className="w-4 h-4 text-zinc-400" />
-                <span>Armazenamento</span>
-              </div>
-            </div>
-            <div className="text-[11px] text-zinc-400 mb-2 flex justify-between tabular-nums">
-              <span>12.4 GB de 50 GB</span>
-              <span className="text-[#DFFF00]">25%</span>
-            </div>
-            <div className="w-full bg-[#242424] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#DFFF00] h-full rounded-full transition-all duration-500"
-                style={{ width: '25%' }}
-              />
-            </div>
-          </div>
+          <WalletPanel compact />
 
           {/* Help Center link */}
           <a

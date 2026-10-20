@@ -21,6 +21,7 @@ test('story deletion scopes scenes to owner, preserves parent on failure and use
           export const getDocs = async () => ({docs:[{ref:'scenes/one'}]});
           export const deleteDoc = async ref => {if(state.fail && ref === 'scenes/one') throw Error('denied'); state.calls.push(['delete',ref]);};
           export const setDoc = async () => {};
+          export const writeBatch = () => ({set(){},update(){},async commit(){}});
           export const onSnapshot = (_, cb) => {cb({forEach(fn){fn({id:'real-id',data:()=>({id:'stale-id',createdAt:'2026-01-01'})});}}); return ()=>{};};`
       }));
     } }],

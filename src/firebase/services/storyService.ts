@@ -7,9 +7,11 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../config';
 import { Story, Scene } from '../../types';
+import { relinkScenePrompts } from '../../../story-continuity';
 
 const STORIES_COLLECTION = 'stories';
 const SCENES_COLLECTION = 'scenes';
@@ -133,7 +135,11 @@ export function subscribeScenes(
       snapshot.forEach((docSnap) => {
         list.push({ ...docSnap.data(), id: docSnap.id } as Scene);
       });
-      list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      list.sort((a, b) => {
+        const aOrder = Number(a.visualStyle?.match(/\[order:(\d+)\]/)?.[1] || 100000);
+        const bOrder = Number(b.visualStyle?.match(/\[order:(\d+)\]/)?.[1] || 100000);
+        return aOrder - bOrder || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
       onUpdate(list);
     },
     (error) => {
@@ -146,6 +152,7 @@ export function subscribeScenes(
 export async function createScene(
   data: Omit<Scene, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
 ): Promise<Scene> {
+  if ((data.prompt || '').length > 2000) throw Error('O prompt excede 2.000 caracteres. O DNA não será cortado.');
   const sceneId = data.id || `scene_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = new Date().toISOString();
 
@@ -183,7 +190,7 @@ export async function updateScene(
     updatedAt: now,
   };
   if (payload.title) payload.title = payload.title.trim().slice(0, 128);
-  if (payload.prompt) payload.prompt = payload.prompt.trim().slice(0, 2000);
+  if (payload.prompt) { if (payload.prompt.length > 2000) throw Error('O prompt excede 2.000 caracteres.'); payload.prompt = payload.prompt.trim(); }
   if (payload.visualStyle) payload.visualStyle = payload.visualStyle.trim().slice(0, 128);
 
   try {
@@ -237,24 +244,12 @@ export async function reorderScenes(
   orderedScenes: Scene[],
   ownerId: string
 ): Promise<void> {
-  const baseTime = Date.now() - orderedScenes.length * 2000;
-  for (let i = 0; i < orderedScenes.length; i++) {
-    const scene = orderedScenes[i];
-    const newTimestamp = new Date(baseTime + i * 1000).toISOString();
-    const docRef = doc(db, SCENES_COLLECTION, scene.id);
-    try {
-      await setDoc(
-        docRef,
-        {
-          createdAt: newTimestamp,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${SCENES_COLLECTION}/${scene.id}`);
-    }
-  }
+  if (orderedScenes.length > 450 || orderedScenes.some(s=>s.ownerId !== ownerId)) throw Error('Sequência inválida.');
+  const batch = writeBatch(db);
+  relinkScenePrompts(orderedScenes).forEach((scene,i)=>batch.update(doc(db,SCENES_COLLECTION,scene.id),{
+    title:scene.title, prompt:scene.prompt || '', visualStyle:formatVisualStyleWithDuration(scene.visualStyle || '',parseSceneDuration(scene.visualStyle),i+1),updatedAt:new Date().toISOString(),
+  }));
+  await batch.commit();
 }
 
 // ----------------------------------------------------
@@ -271,12 +266,26 @@ export function parseSceneDuration(visualStyle?: string): number {
 
 export function formatVisualStyleWithDuration(
   baseStyle: string,
-  durationSec: number
+  durationSec: number,
+  order?: number
 ): string {
   const clean = (baseStyle || 'Cinematográfico')
     .replace(/\s*\[\d+s\]|\s*·\s*\d+s/g, '')
+    .replace(/\s*\[order:\d+\]/g, '')
     .trim();
-  const capped = clean.slice(0, 115);
-  return `${capped} [${durationSec}s]`;
+  const position = order ?? Number(baseStyle?.match(/\[order:(\d+)\]/)?.[1] || 0);
+  return `${clean.slice(0, 96)} [${durationSec}s]${position ? ` [order:${position}]` : ''}`;
+}
+
+export async function saveStorySequence(input: {title:string;synopsis:string;characterIds:string[];ownerId:string;duration:number;scenes:{title:string;prompt:string;visualStyle:string}[]}): Promise<Story> {
+  const now = new Date().toISOString();
+  const story:Story = {id:`story_${crypto.randomUUID()}`,title:input.title.slice(0,128),synopsis:input.synopsis.slice(0,2000),characterIds:input.characterIds,sceneCount:input.scenes.length,status:'in_progress',ownerId:input.ownerId,createdAt:now,updatedAt:now};
+  const batch = writeBatch(db); batch.set(doc(db,STORIES_COLLECTION,story.id),story);
+  input.scenes.forEach((scene,i)=>{
+    if (!scene.prompt || scene.prompt.length > 2000) throw Error('Prompt inválido. Nenhuma história foi salva.');
+    const id=`scene_${crypto.randomUUID()}`;
+    batch.set(doc(db,SCENES_COLLECTION,id),{id,storyId:story.id,title:scene.title.slice(0,128),prompt:scene.prompt,visualStyle:formatVisualStyleWithDuration(scene.visualStyle,input.duration,i+1),status:'ready',ownerId:input.ownerId,createdAt:now,updatedAt:now});
+  });
+  await batch.commit(); return story;
 }
 
