@@ -36,6 +36,8 @@ jobs:
     permissions:
       contents: read
       deployments: read
+      statuses: read
+      issues: read
     steps:
       - name: Require a reviewed branch in this repository
         if: github.event.pull_request.head.repo.full_name != github.repository
@@ -69,6 +71,25 @@ jobs:
                   return;
                 }
               }
+              const { data: combined } = await github.rest.repos.getCombinedStatusForRef({
+                owner: context.repo.owner, repo: context.repo.repo, ref: sha
+              });
+              const ready = combined.statuses.find(s => s.context === 'Vercel' && s.state === 'success');
+              if (ready?.target_url?.startsWith('https://vercel.com/mhrsuporteti-5479/jairobahia/')) {
+                const comments = await github.paginate(github.rest.issues.listComments, {
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number, per_page: 100
+                });
+                for (const comment of comments.filter(c => c.user?.login === 'vercel[bot]')) {
+                  const row = comment.body?.split('\n').find(line => line.includes('](' + ready.target_url + ')'));
+                  const preview = row?.match(/\[Preview\]\((https:\/\/[^)]+)\)/)?.[1];
+                  if (!preview) continue;
+                  const url = new URL(preview);
+                  if (!url.hostname.endsWith('-mhrsuporteti-5479.vercel.app')) continue;
+                  core.setOutput('url', url.origin);
+                  return;
+                }
+              }
               await new Promise(resolve => setTimeout(resolve, 10000));
             }
             core.setFailed('No successful Vercel preview confirmed for PR head SHA. Check Git integration and deployment logs.');
@@ -76,4 +97,5 @@ jobs:
         run: node scripts/smoke-preview.mjs
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          EXPECTED_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}

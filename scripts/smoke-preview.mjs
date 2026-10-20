@@ -22,6 +22,9 @@ const data = await health.json();
 assert.equal(data.status, 'online');
 assert.equal(data.app, 'HYPE CREATOR STUDIO 2.0');
 assert.equal(data.deploymentCheck, 'ready');
+if (process.env.EXPECTED_COMMIT_SHA) {
+  assert.equal(data.commit, process.env.EXPECTED_COMMIT_SHA, 'Preview commit must match PR head');
+}
 const denied = await request('/api/gemini/generate-image', {
   method: 'POST', headers: { 'content-type': 'application/json' },
   body: JSON.stringify({ prompt: 'smoke check', userEmail: 'indicabrasiloficiall@gmail.com' }),

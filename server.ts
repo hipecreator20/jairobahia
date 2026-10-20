@@ -59,6 +59,7 @@ app.get('/api/health', (_req, res) => {
     app: 'HYPE CREATOR STUDIO 2.0',
     phase: 'FASE 1 — FUNDAÇÃO PROFISSIONAL',
     deploymentCheck: 'ready',
+    commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
     timestamp: new Date().toISOString(),
   });
 });

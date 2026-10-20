@@ -49,3 +49,11 @@ PR em rascunho: https://github.com/hipecreator20/jairobahia/pull/1 . Branch publ
 A CLI autenticada confirmou o vínculo do projeto existente jairobahia, no espaço mhrsuporteti-5479, com hipecreator20/jairobahia e Production Branch main. O domínio existente é https://jairobahia.vercel.app; a página inicial retornou HTTP 200 e /api/health retornou 404 na publicação original. Esta atualização em branch separada testa o disparo nativo de Preview.
 
 Firebase: o console da conta mhrsuporteti@gmail.com informou falta de acesso ao projeto. A conta proprietária indicabrasiloficiall@gmail.com está disponível, mas o Firebase exige ativar MFA antes de permitir acesso ao console. A autorização de jairobahia.vercel.app ainda precisa ser conferida/adicionada após essa etapa. Nenhuma alteração de autenticação remota foi aplicada.
+
+## Teste real e compatibilidade serverless
+
+Previews passaram a ser gerados automaticamente pelos pushes da branch. Foram corrigidos o import ESM da entrada serverless e a incompatibilidade da dependência jwks-rsa/jose no runtime da Vercel. TypeScript e testes locais passaram; npm audit retornou zero vulnerabilidades. Um preview corrigido já passou no teste real de página, saúde da API e bloqueio sem autenticação.
+
+O segredo VERCEL_AUTOMATION_BYPASS_SECRET foi cadastrado criptografado no GitHub Actions, usando a credencial de automação do projeto, sem exibir seu conteúdo. A descoberta do preview também aceita o status Vercel do commit e o comentário do bot oficial, pois esta integração não publica registros GitHub Deployments. O teste exige que /api/health retorne o commit exato do PR.
+
+Pendências de aplicação: Firebase exige ativar MFA da conta proprietária antes de autorizar o domínio de produção; login real, leitura/escrita do banco e Storage ainda não foram validados. A Vercel não possui GEMINI_API_KEY cadastrada. Main e publicação de produção permanecem sem merge destas correções.
