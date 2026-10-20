@@ -4,6 +4,8 @@ Leia este arquivo e `docs/DEPLOY.md` antes de continuar. Repositório: https://g
 
 ## Gemini API (rodada seguinte)
 
+Atualização publicada com autorização específica do proprietário: commit `5a2b4bcb128bf17d2f65c5627b2e93f56b127d06`, branch `codex/gemini-interactions-api`, PR #5 https://github.com/hipecreator20/jairobahia/pull/5 . Production READY (`dpl_33YKcFTW4t9mTjEouGQKk9zjWSUP`) em https://jairobahia.vercel.app; saúde 200 confirmou SHA, quatro páginas principais 200 e geração sem login 401. CI validate/preview-smoke passaram; TypeScript, 16 testes e build locais passaram. Não houve chamada Gemini real. Investigar aviso TS2688 `vite/client` na transpilaçao Vercel, apesar do deploy concluído e dos smoke tests aprovados. Este estado substitui os relatos de produção antigos abaixo. Não publicar rodadas futuras sem nova autorização; não alterar main/proteções. Priorizar teste real de geração com teto de gasto e fluxos autenticados; Storage continua desativado e condicionado a Blaze/teto específico.
+
 Branch `codex/gemini-interactions-api` atualiza o código para Gemini Interactions API v1, usa `store:false` e modelo texto padrão `gemini-3.8-flash`; chave atual Vercel foi mantida. Não publique em Production sem pedir autorização específica. Testes sem chamada paga passaram localmente. O screenshot do usuário mostra AI Studio project ID `gen-lang-client-0084582281`, mas nenhum segredo; não confundir com o Firebase atual `gen-lang-client-0704234685`. Para trocar a chave associada àquele projeto, o proprietário deve criar a key em AI Studio e atualizá-la diretamente no segredo Vercel, Preview e Production. Nunca peça/imprima a chave no chat. Veja DEPLOY para registro e próximos passos.
 
 ## Entrega desta rodada

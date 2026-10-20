@@ -1,5 +1,12 @@
 # Fluxo de publicação e estado confirmado
 
+## Gemini publicado com autorização — 20/10/2026
+
+- O proprietário aprovou por voz manter o modelo preparado e publicar. Production foi reconstruída a partir do Preview do commit exato `5a2b4bcb128bf17d2f65c5627b2e93f56b127d06`, sem merge ou mudança nas proteções. Deployment `dpl_33YKcFTW4t9mTjEouGQKk9zjWSUP`, READY, domínio https://jairobahia.vercel.app . `/api/health` retornou 200 e confirmou esse SHA; `/`, `/login`, `/dashboard` e `/admin` retornaram 200. POST `/api/gemini/generate-prompt` sem autenticação retornou 401.
+- PR incremental #5 https://github.com/hipecreator20/jairobahia/pull/5 , branch `codex/gemini-interactions-api`, base `codex/story-continuity-reference`. CI `validate` e `preview-smoke` confirmados success para o SHA publicado. Testes locais: TypeScript, 16 testes e build passaram. Não houve chamada Gemini real, troca de segredo, escrita Firebase ou gasto de IA durante a validação.
+- A Vercel concluiu o build, mas registrou TS2688 (`vite/client`) na transpilaçao da função; saúde e fronteira de autenticação passaram. Investigar esse diagnóstico antes da próxima rodada; não confundir o build READY com ausência de avisos. O bundle grande já era conhecido.
+- Pendências: geração Gemini real com teto de gasto combinado, segunda conta Google e ações Admin reais, revisão/merge dos PRs empilhados, Storage/Blaze com teto específico e App Check. A foto de AI Studio continha ID de projeto, não API key; o segredo atual permaneceu protegido. A autorização cobre esta publicação e seu registro; futuras publicações exigem nova autorização.
+
 ## Atualização Gemini preparada — 20/10/2026
 
 - Branch nova `codex/gemini-interactions-api`, partindo da versão publicada, migra as chamadas de texto, imagem, personagens, histórias e áudio de `generateContent` para Gemini Interactions API v1. Requisições são stateless (`store:false`) e o default de texto passa a `gemini-3.8-flash`; imagem continua em `gemini-3.1-flash-image`. O SDK já resolvido no lockfile é compatível.
