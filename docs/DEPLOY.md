@@ -43,3 +43,9 @@ Referências: https://vercel.com/docs/git/vercel-for-github e https://vercel.com
 TypeScript e dois testes locais passaram. O build completo no Windows encontrou EPERM durante cópia de assets; a compilação isolada passou. GitHub Actions confirmou npm ci, TypeScript, testes e build completos no Linux para d91371d, no run 39356394366. O check de preview aguarda deployment. Nenhuma URL de deployment confirmada.
 
 PR em rascunho: https://github.com/hipecreator20/jairobahia/pull/1 . Branch publicada: codex/automatic-deploy-pipeline. O conector GitHub é somente leitura, mas a autenticação Git local tem escrita/admin e foi usada sem expor credenciais. Nenhum merge realizado.
+
+## Integração Vercel confirmada
+
+A CLI autenticada confirmou o vínculo do projeto existente jairobahia, no espaço mhrsuporteti-5479, com hipecreator20/jairobahia e Production Branch main. O domínio existente é https://jairobahia.vercel.app; a página inicial retornou HTTP 200 e /api/health retornou 404 na publicação original. Esta atualização em branch separada testa o disparo nativo de Preview.
+
+Firebase: o console da conta mhrsuporteti@gmail.com informou falta de acesso ao projeto. A conta proprietária indicabrasiloficiall@gmail.com está disponível, mas o Firebase exige ativar MFA antes de permitir acesso ao console. A autorização de jairobahia.vercel.app ainda precisa ser conferida/adicionada após essa etapa. Nenhuma alteração de autenticação remota foi aplicada.
