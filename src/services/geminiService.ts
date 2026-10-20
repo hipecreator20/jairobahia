@@ -1,3 +1,4 @@
+import { auth } from '../firebase/config';
 import { GeminiStatusInfo } from '../types';
 
 export interface SystemConfigInfo {
@@ -20,7 +21,7 @@ export interface GeneratedImageResponse {
 }
 
 export async function fetchSystemInfo(): Promise<SystemConfigInfo> {
-  const res = await fetch('/api/system/info');
+  const res = await authenticatedFetch('/api/system/info');
   if (!res.ok) {
     throw new Error('Falha ao obter informações do sistema.');
   }
@@ -28,7 +29,7 @@ export async function fetchSystemInfo(): Promise<SystemConfigInfo> {
 }
 
 export async function checkGeminiStatus(): Promise<GeminiStatusInfo> {
-  const res = await fetch('/api/gemini/status');
+  const res = await authenticatedFetch('/api/gemini/status');
   if (!res.ok) {
     throw new Error('Falha na requisição de status do Gemini.');
   }
@@ -42,7 +43,7 @@ export async function verifyGeminiLive(): Promise<{
   message?: string;
   testedAt?: string;
 }> {
-  const res = await fetch('/api/gemini/verify', {
+  const res = await authenticatedFetch('/api/gemini/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -55,7 +56,7 @@ export async function generateImageWithGemini(params: {
   aspectRatio?: string;
   userEmail: string;
 }): Promise<GeneratedImageResponse> {
-  const res = await fetch('/api/gemini/generate-image', {
+  const res = await authenticatedFetch('/api/gemini/generate-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -75,7 +76,7 @@ export async function editImageWithGemini(params: {
   mimeType?: string;
   userEmail: string;
 }): Promise<GeneratedImageResponse> {
-  const res = await fetch('/api/gemini/edit-image', {
+  const res = await authenticatedFetch('/api/gemini/edit-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -123,7 +124,7 @@ export interface GeneratedPromptResult {
 export async function generatePromptWithGemini(
   params: GeneratePromptParams
 ): Promise<GeneratedPromptResult> {
-  const res = await fetch('/api/gemini/generate-prompt', {
+  const res = await authenticatedFetch('/api/gemini/generate-prompt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -171,7 +172,7 @@ export interface GeneratedStoryScriptResult {
 export async function generateStoryScriptWithGemini(
   params: GenerateStoryScriptParams
 ): Promise<GeneratedStoryScriptResult> {
-  const res = await fetch('/api/gemini/generate-story-script', {
+  const res = await authenticatedFetch('/api/gemini/generate-story-script', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -209,7 +210,7 @@ export interface GeneratedCharacterPromptResult {
 export async function generateCharacterMasterPromptWithGemini(
   params: GenerateCharacterPromptParams
 ): Promise<GeneratedCharacterPromptResult> {
-  const res = await fetch('/api/gemini/generate-character-prompt', {
+  const res = await authenticatedFetch('/api/gemini/generate-character-prompt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -223,3 +224,11 @@ export async function generateCharacterMasterPromptWithGemini(
   return data;
 }
 
+
+async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Entre com sua conta para continuar.');
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', 'Bearer ' + await user.getIdToken());
+  return fetch(input, { ...init, headers });
+}

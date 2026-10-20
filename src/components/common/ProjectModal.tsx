@@ -13,10 +13,10 @@ interface ProjectModalProps {
 }
 
 const PRESET_THUMBNAILS = [
-  { label: 'Praia Tropical', url: '/src/assets/images/project_beach_day_1792450194606.jpg' },
-  { label: 'Metrópole Noturna', url: '/src/assets/images/project_city_night_1792450194169.jpg' },
-  { label: 'Campanha Editorial', url: '/src/assets/images/hero_virtual_model_1792450194472.jpg' },
-  { label: 'Estilo de Vida', url: '/src/assets/images/avatar_camila_fitness_1792450194470.jpg' },
+  { label: 'Praia Tropical', url: '/assets/images/project_beach_day_1792450194606.jpg' },
+  { label: 'Metrópole Noturna', url: '/assets/images/project_city_night_1792450194169.jpg' },
+  { label: 'Campanha Editorial', url: '/assets/images/hero_virtual_model_1792450194472.jpg' },
+  { label: 'Estilo de Vida', url: '/assets/images/avatar_camila_fitness_1792450194470.jpg' },
 ];
 
 export const ProjectModal: React.FC<ProjectModalProps> = ({

@@ -143,7 +143,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
             >
               <div className="relative aspect-[16/10] bg-[#1a1a1a]">
                 <img
-                  src={p.thumbnail || '/src/assets/images/project_beach_day_1792450194606.jpg'}
+                  src={p.thumbnail || '/assets/images/project_beach_day_1792450194606.jpg'}
                   alt={p.title}
                   className="w-full h-full object-cover"
                 />
@@ -199,7 +199,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
             >
               <div className="flex items-start gap-3.5">
                 <img
-                  src={c.avatarUrl || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+                  src={c.avatarUrl || '/assets/images/avatar_lara_model_1792450194066.jpg'}
                   alt={c.name}
                   className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-[#333]"
                 />

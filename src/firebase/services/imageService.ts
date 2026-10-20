@@ -66,28 +66,8 @@ export async function saveImageAsset(params: {
       finalImageUrl = await getDownloadURL(storageRef);
       storagePath = path;
     } catch (storageError) {
-      console.warn('[HYPE STORAGE] Falha no upload para Firebase Storage, tentando fallback no servidor:', storageError);
-      try {
-        // Fallback: upload to server static uploads
-        const res = await fetch('/api/storage/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            assetId,
-            imageBase64: params.imageBase64,
-            ownerId: params.ownerId,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.url) {
-            finalImageUrl = data.url;
-            storagePath = data.path;
-          }
-        }
-      } catch (serverFallbackErr) {
-        console.warn('[HYPE STORAGE] Fallback no servidor não disponível, mantendo URL original:', serverFallbackErr);
-      }
+      console.error('[HYPE STORAGE] Upload não concluído:', storageError);
+      throw new Error('Não foi possível salvar a imagem no Firebase Storage. Verifique as regras e tente novamente.');
     }
   }
 
@@ -147,7 +127,7 @@ export async function seedInitialImageAssetsIfEmpty(ownerId: string): Promise<vo
       {
         title: 'Dia na Praia (Cena 1)',
         prompt: 'Fotografia cinematográfica de enseada de praia tropical com água azul-turquesa, areia dourada e iluminação de pôr do sol.',
-        imageUrl: '/src/assets/images/project_beach_day_1792450194606.jpg',
+        imageUrl: '/assets/images/project_beach_day_1792450194606.jpg',
         aspect: '4:3',
         modelUsed: 'gemini-3.1-flash-lite-image',
         ownerId,
@@ -155,7 +135,7 @@ export async function seedInitialImageAssetsIfEmpty(ownerId: string): Promise<vo
       {
         title: 'Noite na Cidade (Cena 2)',
         prompt: 'Fotografia noturna de metrópole moderna com iluminação neon, asfalto molhado e atmosfera cinematográfica.',
-        imageUrl: '/src/assets/images/project_city_night_1792450194169.jpg',
+        imageUrl: '/assets/images/project_city_night_1792450194169.jpg',
         aspect: '4:3',
         modelUsed: 'gemini-3.1-flash-lite-image',
         ownerId,
@@ -163,7 +143,7 @@ export async function seedInitialImageAssetsIfEmpty(ownerId: string): Promise<vo
       {
         title: 'Campanha Editorial',
         prompt: 'Mulher influenciadora digital com pele radiante, terno de seda em terra cota, sacada com vista ao entardecer.',
-        imageUrl: '/src/assets/images/hero_virtual_model_1792450194472.jpg',
+        imageUrl: '/assets/images/hero_virtual_model_1792450194472.jpg',
         aspect: '16:9',
         modelUsed: 'gemini-3.1-flash-lite-image',
         ownerId,
@@ -171,7 +151,7 @@ export async function seedInitialImageAssetsIfEmpty(ownerId: string): Promise<vo
       {
         title: 'Lara Beauty Portrait',
         prompt: 'Retrato de beleza editorial de modelo digital com olhos castanhos expressivos e maquiagem radiante natural.',
-        imageUrl: '/src/assets/images/avatar_lara_model_1792450194066.jpg',
+        imageUrl: '/assets/images/avatar_lara_model_1792450194066.jpg',
         aspect: '1:1',
         modelUsed: 'gemini-3.1-flash-lite-image',
         ownerId,
@@ -179,7 +159,7 @@ export async function seedInitialImageAssetsIfEmpty(ownerId: string): Promise<vo
       {
         title: 'Camila Activewear',
         prompt: 'Retrato de influenciadora fitness com sorriso radiante em iluminação solar suave e ambiente de estúdio.',
-        imageUrl: '/src/assets/images/avatar_camila_fitness_1792450194470.jpg',
+        imageUrl: '/assets/images/avatar_camila_fitness_1792450194470.jpg',
         aspect: '1:1',
         modelUsed: 'gemini-3.1-flash-lite-image',
         ownerId,

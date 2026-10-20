@@ -108,7 +108,7 @@ export async function seedInitialCharactersIfEmpty(ownerId: string): Promise<voi
         niche: 'Modelo',
         bio: 'Top model digital internacional com foco em moda sustentável e alta costura.',
         visualDna: 'Olhos castanhos quentes, pele dourada radiante, cabelos castanhos volumosos ondulados.',
-        avatarUrl: '/src/assets/images/avatar_lara_model_1792450194066.jpg',
+        avatarUrl: '/assets/images/avatar_lara_model_1792450194066.jpg',
         ownerId,
       },
       {
@@ -116,7 +116,7 @@ export async function seedInitialCharactersIfEmpty(ownerId: string): Promise<voi
         niche: 'Fitness',
         bio: 'Personal trainer virtual e defensora de saúde integrativa e longevidade.',
         visualDna: 'Cabelos loiros iluminados, sorriso radiante, postura atlética, iluminação natural.',
-        avatarUrl: '/src/assets/images/avatar_camila_fitness_1792450194470.jpg',
+        avatarUrl: '/assets/images/avatar_camila_fitness_1792450194470.jpg',
         ownerId,
       },
       {
@@ -124,7 +124,7 @@ export async function seedInitialCharactersIfEmpty(ownerId: string): Promise<voi
         niche: 'Lifestyle',
         bio: 'Criador de conteúdo sobre viagens cinematográficas, café especial e arquitetura.',
         visualDna: 'Barba alinhada, óculos escuros clássicos, iluminação de golden hour.',
-        avatarUrl: '/src/assets/images/hero_virtual_model_1792450194472.jpg',
+        avatarUrl: '/assets/images/hero_virtual_model_1792450194472.jpg',
         ownerId,
       },
       {
@@ -132,7 +132,7 @@ export async function seedInitialCharactersIfEmpty(ownerId: string): Promise<voi
         niche: 'Fashion',
         bio: 'Diretora criativa e influenciadora de tendências de streetwear e luxo moderno.',
         visualDna: 'Estética minimalista sofisticada, maquiagem natural, contrastes sutis.',
-        avatarUrl: '/src/assets/images/project_beach_day_1792450194606.jpg',
+        avatarUrl: '/assets/images/project_beach_day_1792450194606.jpg',
         ownerId,
       },
     ];

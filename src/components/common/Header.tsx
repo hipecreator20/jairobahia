@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-3 p-1.5 md:pl-2 md:pr-3 rounded-xl hover:bg-[#141414] border border-transparent hover:border-[#242424] transition-all cursor-pointer"
           >
             <img
-              src={user?.photoURL || profile?.photoURL || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+              src={user?.photoURL || profile?.photoURL || '/assets/images/avatar_lara_model_1792450194066.jpg'}
               alt={profile?.displayName || 'Usuário'}
               referrerPolicy="no-referrer"
               className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#DFFF00]/30"

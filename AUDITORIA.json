@@ -1,0 +1,24 @@
+{
+  "score": 3,
+  "summary": "Revisão estática das regras existentes; regras remotas e edição do banco não verificadas.",
+  "findings": [
+    {
+      "check": "Business Logic vs. Rules",
+      "severity": "major",
+      "issue": "Interface limita acesso ao proprietário, mas regras Firestore permitem a qualquer usuário autenticado criar seus próprios documentos.",
+      "recommendation": "Alinhar isSignedIn com proprietário e email_verified após confirmar ambiente e testar regras no emulador."
+    },
+    {
+      "check": "The Update Bypass",
+      "severity": "minor",
+      "issue": "Updates não preservam id em coleções de conteúdo.",
+      "recommendation": "Exigir incoming().id == existing().id em updates."
+    },
+    {
+      "check": "Type Safety",
+      "severity": "minor",
+      "issue": "preferences não possui validação de conteúdo e tamanho; sceneCount permite qualquer number.",
+      "recommendation": "Validar mapa de preferências e contagens inteiras não negativas."
+    }
+  ]
+}

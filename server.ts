@@ -1,9 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
+
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
@@ -11,13 +13,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+export const app = express();
+const adminApp = getApps()[0] || initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId });
+const textModel = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
+const imageModel = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
+app.disable('x-powered-by');
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
 // Support payloads up to 15MB for image uploads/base64
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '4mb' }));
+app.use(express.urlencoded({ extended: true, limit: '4mb' }));
 
 // Serve static public assets (including uploaded images)
 app.use(express.static(path.resolve(__dirname, 'public')));
@@ -52,8 +58,25 @@ app.get('/api/health', (_req, res) => {
     status: 'online',
     app: 'HYPE CREATOR STUDIO 2.0',
     phase: 'FASE 1 — FUNDAÇÃO PROFISSIONAL',
+    deploymentCheck: 'ready',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health') return next();
+  const bearer = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
+  if (!bearer) return res.status(401).json({ success: false, message: 'Autenticação necessária.' });
+  try {
+    const token = await getAuth(adminApp).verifyIdToken(bearer);
+    if (!token.email_verified || token.email?.toLowerCase() !== 'indicabrasiloficiall@gmail.com') {
+      return res.status(403).json({ success: false, message: 'Acesso restrito ao proprietário.' });
+    }
+    req.body = { ...req.body, userEmail: token.email };
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+  }
 });
 
 app.get('/api/system/info', (_req, res) => {
@@ -71,52 +94,9 @@ app.get('/api/system/info', (_req, res) => {
 // ----------------------------------------------------
 // Gemini Server-Side Integration & Real Status Check
 // ----------------------------------------------------
-app.get('/api/gemini/status', async (_req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-    return res.json({
-      configured: false,
-      verified: false,
-      model: 'gemini-3.8-flash',
-      message: 'Chave GEMINI_API_KEY não configurada no ambiente do servidor.',
-    });
-  }
-
-  try {
-    const ai = getAiClient();
-    if (!ai) {
-      return res.status(500).json({
-        configured: false,
-        verified: false,
-        message: 'Falha ao inicializar o cliente GoogleGenAI.',
-      });
-    }
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: 'Responda apenas com a palavra: OPERACIONAL',
-    });
-
-    const responseText = response.text ? response.text.trim() : '';
-
-    return res.json({
-      configured: true,
-      verified: true,
-      model: 'gemini-3.8-flash',
-      message: 'Conexão com Google Gemini API verificada com sucesso em tempo real.',
-      sampleEcho: responseText.slice(0, 50),
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    console.error('Gemini verification check error:', error);
-    return res.json({
-      configured: true,
-      verified: false,
-      model: 'gemini-3.8-flash',
-      message: 'Chave presente, porém a requisição de verificação falhou: ' + (error?.message || 'Erro de comunicação'),
-      errorDetails: error?.message,
-    });
-  }
+app.get('/api/gemini/status', (_req, res) => {
+  res.json({ configured: Boolean(getAiClient()), verified: false, model: textModel,
+    message: 'Use Verificar para testar a conexão com o provedor.' });
 });
 
 // Explicit verify endpoint for the Configurações panel
@@ -135,7 +115,7 @@ app.post('/api/gemini/verify', async (_req, res) => {
 
     const start = Date.now();
     const result = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: textModel,
       contents: 'Ping do Hype Creator Studio 2.0. Confirme estado em uma palavra.',
     });
     const latencyMs = Date.now() - start;
@@ -211,7 +191,7 @@ app.post('/api/gemini/generate-image', async (req, res) => {
     else mappedAspect = '1:1';
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-image',
+      model: imageModel,
       contents: {
         parts: [{ text: enhancedPrompt }],
       },
@@ -245,7 +225,7 @@ app.post('/api/gemini/generate-image', async (req, res) => {
       success: true,
       imageUrl: `data:${mimeType};base64,${generatedBase64}`,
       aspect: mappedAspect,
-      modelUsed: 'gemini-3.1-flash-lite-image',
+      modelUsed: imageModel,
       prompt: enhancedPrompt,
       createdAt: new Date().toISOString(),
     });
@@ -298,7 +278,7 @@ app.post('/api/gemini/edit-image', async (req, res) => {
     const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-image',
+      model: imageModel,
       contents: {
         parts: [
           {
@@ -336,7 +316,7 @@ app.post('/api/gemini/edit-image', async (req, res) => {
     return res.json({
       success: true,
       imageUrl: `data:${outMime};base64,${editedBase64}`,
-      modelUsed: 'gemini-3.1-flash-lite-image',
+      modelUsed: imageModel,
       prompt: prompt.trim(),
       createdAt: new Date().toISOString(),
     });
@@ -434,7 +414,7 @@ ${atmosphere ? `- Atmosfera / Clima: ${atmosphere}` : ''}
 ${additionalInstructions ? `- Instruções Adicionais: ${additionalInstructions.trim()}` : ''}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: textModel,
       contents: [
         { text: systemPrompt },
         { text: userPromptContent }
@@ -541,7 +521,7 @@ Personagens Envolvidos: ${characterNames.length > 0 ? characterNames.join(', ') 
 Número de Cenas: ${sceneCount || 4}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: textModel,
       contents: [
         { text: systemPrompt },
         { text: userPromptContent }
@@ -636,7 +616,7 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: textModel,
       contents: promptText,
       config: {
         responseMimeType: 'application/json',
@@ -672,55 +652,22 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido:
 // ----------------------------------------------------
 // Image Lab: Fallback Disk Storage Upload
 // ----------------------------------------------------
-app.post('/api/storage/upload', async (req, res) => {
-  try {
-    const { assetId, imageBase64 } = req.body;
-    if (!imageBase64 || !assetId) {
-      return res.status(400).json({ success: false, message: 'Dados insuficientes para upload.' });
-    }
-
-    const uploadsDir = path.resolve(__dirname, 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '');
-    const filename = `${assetId}.png`;
-    const filepath = path.join(uploadsDir, filename);
-
-    fs.writeFileSync(filepath, Buffer.from(cleanBase64, 'base64'));
-
-    return res.json({
-      success: true,
-      url: `/uploads/${filename}`,
-      path: `uploads/${filename}`,
-    });
-  } catch (err: any) {
-    console.error('Storage upload fallback error:', err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
+app.post('/api/storage/upload', (_req, res) => {
+  res.status(410).json({ success: false, message: 'Utilize o Firebase Storage para uploads persistentes.' });
 });
 
-// ----------------------------------------------------
-// Mount Frontend (Vite in Dev / Static in Prod)
-// ----------------------------------------------------
+app.use('/api', (_req, res) => { res.status(404).json({ success: false, message: 'Endpoint não encontrado.' }); });
+
 async function startServer() {
   if (!isProd) {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
+    const { createServer } = await import('vite');
+    const vite = await createServer({ server: { middlewareMode: true }, appType: 'spa' });
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-    });
+    app.get('*', (_req, res) => res.sendFile(path.resolve(__dirname, 'dist', 'index.html')));
   }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`HYPE CREATOR STUDIO 2.0 running at http://0.0.0.0:${PORT}`);
-  });
+  app.listen(PORT, '0.0.0.0', () => console.log('Hype Creator Studio: http://localhost:' + PORT));
 }
-
-startServer();
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') void startServer();
+export default app;
