@@ -38,3 +38,7 @@ Login real, regras em emulador e geração Gemini precisam de validação com as
 TypeScript e teste da API aprovados. Build de produção aprovado com aviso de bundle acima de 500 kB. npm audit final: zero vulnerabilidades conhecidas após atualização Firebase Admin e override compatível de gRPC. Uma repetição do build em dist encontrou EPERM do Windows ao limpar a saída; o primeiro build completo passou, e uma tentativa em pasta alternativa foi interrompida após não concluir.
 
 Documentação utilizada: https://vercel.com/docs/frameworks/backend/express e https://firebase.google.com/docs/auth/admin/verify-id-tokens e https://ai.google.dev/gemini-api/docs/image-generation .
+
+## Publicação com revisão
+
+Fluxo e estado remoto em docs/DEPLOY.md. A branch main exige aprovação e checks validate/preview-smoke. A Vercel precisa estar vinculada ao repositório existente; nenhum projeto ou domínio novo foi criado.

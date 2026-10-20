@@ -29,7 +29,7 @@ jobs:
           path: dist
           retention-days: 7
   preview-smoke:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -37,6 +37,11 @@ jobs:
       contents: read
       deployments: read
     steps:
+      - name: Require a reviewed branch in this repository
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo 'Fork previews require a separately reviewed deployment workflow.'
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
