@@ -6,11 +6,12 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase/config';
-import { syncUserProfile } from '../firebase/services/userService';
+import { auth, db, googleProvider } from '../firebase/config';
+import { addDoc, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { UserProfile } from '../types';
 
 export const AUTHORIZED_OWNER_EMAIL = 'indicabrasiloficiall@gmail.com';
+export const MASTER_UID = 'FTqparyG04fCf9eDgUTa6e2tWgp2';
 
 interface AuthContextType {
   user: User | null;
@@ -18,11 +19,9 @@ interface AuthContextType {
   isOwner: boolean;
   isAuthorized: boolean;
   loading: boolean;
-  unauthorizedEmail: string | null;
   authError: string | null;
   signInWithGoogle: () => Promise<UserCredential>;
   logout: () => Promise<void>;
-  dismissUnauthorizedNotice: () => void;
   clearAuthError: () => void;
 }
 
@@ -32,89 +31,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [unauthorizedEmail, setUnauthorizedEmail] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Listen to Firebase auth state changes persistently
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const email = firebaseUser.email || '';
-        const isAuthorizedOwner = email.trim().toLowerCase() === AUTHORIZED_OWNER_EMAIL.trim().toLowerCase();
-
-        if (!isAuthorizedOwner) {
-          console.warn(`[HYPE AUTH] Acesso bloqueado para e-mail não autorizado: ${email}`);
-          setUnauthorizedEmail(email);
-          setUser(null);
-          setProfile(null);
-          try {
-            await fbSignOut(auth);
-          } catch (e) {
-            console.error('[HYPE AUTH] Erro ao deslogar usuário não autorizado:', e);
-          }
+    let unsubscribeProfile: (() => void) | undefined;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      unsubscribeProfile?.();
+      setUser(firebaseUser);
+      setProfile(null);
+      if (!firebaseUser) { setLoading(false); return; }
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      try {
+        const current = await getDoc(userRef);
+        if (!current.exists()) {
+          const now = new Date().toISOString();
+          await setDoc(userRef, {
+            id: firebaseUser.uid, email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || '', photoURL: firebaseUser.photoURL || '',
+            isOwner: firebaseUser.uid === MASTER_UID,
+            status: firebaseUser.uid === MASTER_UID ? 'approved' : 'pending', plan: 'free',
+            createdAt: now, updatedAt: now,
+            preferences: { theme: 'dark', language: 'pt-BR', defaultAspect: '16:9' },
+          });
         } else {
-          console.log(`[HYPE AUTH] Proprietário autorizado autenticado: ${email} (UID: ${firebaseUser.uid})`);
-          setUnauthorizedEmail(null);
-          setUser(firebaseUser);
-
-          // Sync profile in Firestore
-          try {
-            const synced = await syncUserProfile(
-              firebaseUser.uid,
-              email,
-              firebaseUser.displayName || 'Proprietário Hype',
-              firebaseUser.photoURL || '',
-              true
-            );
-            setProfile(synced);
-          } catch (e) {
-            console.warn('[HYPE AUTH] Perfil Firestore sincronizado em memória de fallback:', e);
-            setProfile({
-              id: firebaseUser.uid,
-              email,
-              displayName: firebaseUser.displayName || 'Proprietário Hype',
-              photoURL: firebaseUser.photoURL || '',
-              isOwner: true,
-              preferences: {
-                theme: 'dark',
-                language: 'pt-BR',
-                defaultAspect: '16:9',
-              },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
+          await updateDoc(userRef, {
+            displayName: firebaseUser.displayName || '',
+            photoURL: firebaseUser.photoURL || '', updatedAt: new Date().toISOString(),
+          });
         }
-      } else {
-        setUser(null);
-        setProfile(null);
+      } catch (error) {
+        console.warn('[HYPE AUTH] Cadastro inicial aguardando regras atualizadas:', error);
       }
-      setLoading(false);
+      let loggedLogin = false;
+      unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
+        const data = snapshot.exists() ? snapshot.data() as UserProfile : null;
+        setProfile(data ? { ...data, isOwner: firebaseUser.uid === MASTER_UID } : null);
+        if (data && !loggedLogin) void addDoc(collection(db, 'accessLogs'), {
+          uid: firebaseUser.uid, email: firebaseUser.email || '', event: 'login', createdAt: new Date().toISOString(),
+        }).catch(error => console.warn('[HYPE AUTH] Evento de acesso não registrado:', error));
+        loggedLogin = true;
+        setLoading(false);
+      }, (error) => {
+        console.error('[HYPE AUTH] Falha ao observar status de acesso:', error);
+        setLoading(false);
+      });
     });
-
-    return () => unsubscribe();
+    return () => { unsubscribeProfile?.(); unsubscribeAuth(); };
   }, []);
 
   const signInWithGoogle = async (): Promise<UserCredential> => {
     setLoading(true);
-    setUnauthorizedEmail(null);
     setAuthError(null);
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const email = result.user?.email || '';
-      const isAuthorizedOwner = email.trim().toLowerCase() === AUTHORIZED_OWNER_EMAIL.trim().toLowerCase();
-
-      if (!isAuthorizedOwner) {
-        console.warn(`[HYPE AUTH] Popup concluído com e-mail não autorizado: ${email}`);
-        setUnauthorizedEmail(email);
-        await fbSignOut(auth);
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-        throw new Error(`Acesso não autorizado: O e-mail ${email} não é o proprietário do estúdio.`);
-      }
-
       setUser(result.user);
       setLoading(false);
       return result;
@@ -134,24 +104,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setProfile(null);
-      setUnauthorizedEmail(null);
       setAuthError(null);
       setLoading(false);
     }
-  };
-
-  const dismissUnauthorizedNotice = () => {
-    setUnauthorizedEmail(null);
   };
 
   const clearAuthError = () => {
     setAuthError(null);
   };
 
-  const isOwner = Boolean(
-    user?.email && user.email.trim().toLowerCase() === AUTHORIZED_OWNER_EMAIL.trim().toLowerCase()
-  );
-  const isAuthorized = Boolean(user && isOwner);
+  const isOwner = user?.uid === MASTER_UID;
+  const isAuthorized = Boolean(user && (isOwner || profile?.status === 'approved'));
 
   return (
     <AuthContext.Provider
@@ -161,11 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isOwner,
         isAuthorized,
         loading,
-        unauthorizedEmail,
         authError,
         signInWithGoogle,
         logout,
-        dismissUnauthorizedNotice,
         clearAuthError,
       }}
     >

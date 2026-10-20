@@ -13,7 +13,9 @@ import {
   HelpCircle,
   Menu,
   X,
+  ShieldCheck,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -21,6 +23,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile }) => {
+  const { isOwner } = useAuth();
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Character Studio', path: '/character-studio', icon: User },
@@ -29,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     { name: 'Prompt Director', path: '/prompt-director', icon: Sparkles },
     { name: 'Biblioteca', path: '/library', icon: FolderArchive },
     { name: 'Configurações', path: '/settings', icon: Settings },
+    ...(isOwner ? [{ name: 'Administração', path: '/admin', icon: ShieldCheck }] : []),
   ];
 
   return (

@@ -1,8 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { cert, initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getAppCheck } from 'firebase-admin/app-check';
+import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 import { fileURLToPath } from 'url';
 
@@ -14,7 +16,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const app = express();
-const adminApp = getApps()[0] || initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId });
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) : undefined;
+const adminApp = getApps()[0] || initializeApp({
+  projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  ...(serviceAccount ? { credential: cert(serviceAccount) } : {}),
+});
+const MASTER_UID = 'FTqparyG04fCf9eDgUTa6e2tWgp2';
+const requestWindows = new Map<string, { start: number; count: number }>();
 const textModel = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
 const imageModel = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
 app.disable('x-powered-by');
@@ -57,7 +65,6 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'online',
     app: 'HYPE CREATOR STUDIO 2.0',
-    phase: 'FASE 1 — FUNDAÇÃO PROFISSIONAL',
     deploymentCheck: 'ready',
     commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
     timestamp: new Date().toISOString(),
@@ -68,15 +75,92 @@ app.use('/api', async (req, res, next) => {
   if (req.path === '/health') return next();
   const bearer = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
   if (!bearer) return res.status(401).json({ success: false, message: 'Autenticação necessária.' });
+  let token;
   try {
-    const token = await getAuth(adminApp).verifyIdToken(bearer);
-    if (!token.email_verified || token.email?.toLowerCase() !== 'indicabrasiloficiall@gmail.com') {
-      return res.status(403).json({ success: false, message: 'Acesso restrito ao proprietário.' });
+    token = await getAuth(adminApp).verifyIdToken(bearer);
+  } catch {
+    return res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+  }
+  try {
+    if (!token.email_verified || !token.uid) {
+      return res.status(403).json({ success: false, message: 'Conta Google verificada necessária.' });
+    }
+    if (process.env.FIREBASE_APP_CHECK_REQUIRED === 'true') {
+      const appCheckToken = req.header('X-Firebase-AppCheck');
+      if (!appCheckToken) return res.status(401).json({ success: false, message: 'Validação App Check necessária.' });
+      await getAppCheck(adminApp).verifyToken(appCheckToken);
+    }
+    const window = requestWindows.get(token.uid);
+    const now = Date.now();
+    if (window && now - window.start < 60_000 && window.count >= 60) return res.status(429).json({ success: false, message: 'Muitas solicitações. Aguarde um minuto.' });
+    requestWindows.set(token.uid, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
+    const metersPrompts = /^\/gemini\/(generate-|edit-image|verify)/.test(req.path);
+    let store: ReturnType<typeof getFirestore> | undefined;
+    let profile: Record<string, any> = {};
+    if (token.uid !== MASTER_UID || metersPrompts) {
+      if (!serviceAccount) return res.status(503).json({ success: false, message: 'A autorização do Firebase Admin ainda não está configurada no servidor.' });
+      store = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
+      const profileRef = store.collection('users').doc(token.uid);
+      const profileSnap = await profileRef.get();
+      profile = profileSnap.data() || {};
+      if (token.uid !== MASTER_UID && (!profileSnap.exists || profile.status !== 'approved')) return res.status(403).json({ success: false, message: 'Acesso aguardando aprovação ou suspenso.' });
+    }
+    if (metersPrompts && store) {
+      const planSnap = await store.doc('settings/plans').get();
+      const planId = ['free','pro','premium'].includes(profile.plan) ? profile.plan : 'free';
+      const defaults: Record<string, number> = { free: 10, pro: 300, premium: 1000 };
+      const configuredLimit = Number(planSnap.data()?.plans?.[planId]?.promptsPerMonth ?? defaults[planId]);
+      const limit = Number.isSafeInteger(configuredLimit) && configuredLimit >= 0 && configuredLimit <= 100_000 ? configuredLimit : defaults[planId];
+      const month = new Date().toISOString().slice(0, 7);
+      const usageRef = store.collection('usage').doc(`${token.uid}_${month}`);
+      try {
+        await store.runTransaction(async tx => {
+          const usageSnap = await tx.get(usageRef);
+          const usage = usageSnap.data() || {};
+          const count = Number(usage.count || 0);
+          const minute = Math.floor(Date.now() / 60_000);
+          const minuteCount = usage.minute === minute ? Number(usage.minuteCount || 0) : 0;
+          if (count >= limit) throw new Error('PROMPT_LIMIT');
+          if (minuteCount >= 20) throw new Error('RATE_LIMIT');
+          tx.set(usageRef, { uid: token.uid, month, count: count + 1, minute, minuteCount: minuteCount + 1, plan: planId, updatedAt: new Date().toISOString() });
+        });
+        await store.collection('accessLogs').add({ uid: token.uid, email: token.email || '', event: 'ai_prompt', createdAt: new Date().toISOString(), details: { plan: planId } });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'PROMPT_LIMIT') return res.status(429).json({ success: false, message: 'Limite mensal de prompts atingido.' });
+        if (error instanceof Error && error.message === 'RATE_LIMIT') return res.status(429).json({ success: false, message: 'Limite temporário de gerações atingido. Aguarde um minuto.' });
+        throw error;
+      }
     }
     req.body = { ...req.body, userEmail: token.email };
     return next();
-  } catch {
-    return res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+  } catch (error) {
+    console.error('[HYPE API] Verificação de acesso falhou:', error);
+    return res.status(503).json({ success: false, message: 'Não foi possível validar as permissões agora.' });
+  }
+});
+
+app.patch('/api/admin/users/:uid/status', async (req, res) => {
+  const actorUid = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
+  const statuses = ['approved', 'rejected', 'suspended', 'pending'];
+  if (!serviceAccount) return res.status(503).json({ success: false, message: 'Configure a credencial Firebase Admin no ambiente Vercel.' });
+  try {
+    const actor = await getAuth(adminApp).verifyIdToken(actorUid || '', true);
+    if (actor.uid !== MASTER_UID) return res.status(403).json({ success: false, message: 'Ação exclusiva do Master.' });
+    const { uid } = req.params;
+    const { status } = req.body || {};
+    if (!uid || uid === MASTER_UID || !statuses.includes(status)) return res.status(400).json({ success: false, message: 'Usuário ou status inválido.' });
+    const auth = getAuth(adminApp);
+    const target = await auth.getUser(uid);
+    const store = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
+    await store.collection('users').doc(uid).update({ status, updatedAt: new Date().toISOString() });
+    const claims = { ...target.customClaims, approved: status === 'approved' };
+    await auth.setCustomUserClaims(uid, claims);
+    if (status !== 'approved') await auth.revokeRefreshTokens(uid);
+    await store.collection('accessLogs').add({ uid, email: target.email || '', event: `access_${status}`, createdAt: new Date().toISOString(), details: { actorUid: actor.uid } });
+    return res.json({ success: true, status });
+  } catch (error) {
+    console.error('[HYPE ADMIN] Falha ao alterar o acesso:', error);
+    return res.status(500).json({ success: false, message: 'Não foi possível atualizar o acesso.' });
   }
 });
 

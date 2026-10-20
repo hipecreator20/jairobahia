@@ -48,7 +48,7 @@ PR em rascunho: https://github.com/hipecreator20/jairobahia/pull/1 . Branch publ
 
 A CLI autenticada confirmou o vínculo do projeto existente jairobahia, no espaço mhrsuporteti-5479, com hipecreator20/jairobahia e Production Branch main. O domínio existente é https://jairobahia.vercel.app; a página inicial retornou HTTP 200 e /api/health retornou 404 na publicação original. Esta atualização em branch separada testa o disparo nativo de Preview.
 
-Firebase: o console da conta mhrsuporteti@gmail.com informou falta de acesso ao projeto. A conta proprietária indicabrasiloficiall@gmail.com está disponível, mas o Firebase exige ativar MFA antes de permitir acesso ao console. A autorização de jairobahia.vercel.app ainda precisa ser conferida/adicionada após essa etapa. Nenhuma alteração de autenticação remota foi aplicada.
+Firebase: projeto gen-lang-client-0704234685 e banco nomeado confirmados no console da conta proprietária. UID Master confirmado na Authentication: FTqparyG04fCf9eDgUTa6e2tWgp2. Google Auth habilitado e jairobahia.vercel.app autorizado. Nenhum dado foi removido ou alterado.
 
 ## Teste real e compatibilidade serverless
 
@@ -56,4 +56,8 @@ Previews passaram a ser gerados automaticamente pelos pushes da branch. Foram co
 
 O segredo VERCEL_AUTOMATION_BYPASS_SECRET foi cadastrado criptografado no GitHub Actions, usando a credencial de automação do projeto, sem exibir seu conteúdo. A descoberta do preview também aceita o status Vercel do commit e o comentário do bot oficial, pois esta integração não publica registros GitHub Deployments. O teste exige que /api/health retorne o commit exato do PR.
 
-Pendências de aplicação: Firebase exige ativar MFA da conta proprietária antes de autorizar o domínio de produção; login real, leitura/escrita do banco e Storage ainda não foram validados. A Vercel não possui GEMINI_API_KEY cadastrada. Main e publicação de produção permanecem sem merge destas correções.
+## Acesso multiusuário — 20/10/2026
+
+Branch preparada com cadastro Google pendente, Master identificado pelo UID no cliente, nas regras e no backend, painel /admin com dados em tempo real, gestão de status e planos, alertas, acessos e cotas. APIs verificam aprovação e aplicam limites mensais transacionais; pagamentos seguem desativados. O selo “Fase 1” foi removido.
+
+Validação local: TypeScript, dois testes e build passaram. Regras Firestore/Storage ainda precisam ser testadas no emulador e implantadas após revisão. A Vercel requer FIREBASE_SERVICE_ACCOUNT_JSON para ações Admin e cotas, GEMINI_API_KEY para IA e, se App Check for ativado, sua chave pública. Storage requer Blaze; o projeto segue no Spark. Nenhum merge, deploy de produção ou alteração remota de regras foi realizado.

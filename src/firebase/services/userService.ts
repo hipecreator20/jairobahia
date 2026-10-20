@@ -22,7 +22,7 @@ export async function syncUserProfile(
   email: string,
   displayName?: string,
   photoURL?: string,
-  isOwner = true
+  isOwner = false
 ): Promise<UserProfile> {
   const now = new Date().toISOString();
   const docRef = doc(db, COLLECTION_NAME, userId);
@@ -47,6 +47,8 @@ export async function syncUserProfile(
       displayName: displayName || 'Proprietário do Estúdio',
       photoURL: photoURL || '',
       isOwner,
+      status: 'pending',
+      plan: 'free',
       preferences: {
         theme: 'dark',
         language: 'pt-BR',

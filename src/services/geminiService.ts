@@ -1,4 +1,5 @@
-import { auth } from '../firebase/config';
+import { appCheck, auth } from '../firebase/config';
+import { getToken } from 'firebase/app-check';
 import { GeminiStatusInfo } from '../types';
 
 export interface SystemConfigInfo {
@@ -230,5 +231,6 @@ async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = 
   if (!user) throw new Error('Entre com sua conta para continuar.');
   const headers = new Headers(init.headers);
   headers.set('Authorization', 'Bearer ' + await user.getIdToken());
+  if (appCheck) headers.set('X-Firebase-AppCheck', (await getToken(appCheck)).token);
   return fetch(input, { ...init, headers });
 }
