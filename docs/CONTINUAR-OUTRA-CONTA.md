@@ -1,5 +1,15 @@
 # PROMPT DE CONTINUAÇÃO PARA A OUTRA CONTA (Jairinho)
 
+## Atualização mais recente — prevalece sobre o histórico abaixo
+
+Produção confirmada em https://jairobahia.vercel.app no commit `6f6f0d1cfe6f5e076f11423406659caeff9f6ed5`, após redeploy Production autorizado pela Vercel, READY. Saúde HTTP 200 com SHA exato; páginas principais HTTP 200. PR https://github.com/hipecreator20/jairobahia/pull/1 segue aberto/sem merge; proteções intactas. Não confundir resposta HTTP com validação autenticada.
+
+Nova branch local `codex/admin-content-polish`, baseada no commit acima: referências visuais com briefings no Dashboard, IDs reais do Firestore em seis tipos de registros, exclusão de histórias com consulta por proprietário e limpeza anterior à remoção da história, preservação do registro de imagem quando Storage falha, Admin com trava/feedback de planos e alertas, exclusão de alertas, erros de preferências e feedback de exclusão em Story Studio e Prompt Lab. Nenhuma regra, configuração Firebase ou dado remoto foi alterado. Imagens existentes foram reutilizadas, sem geração paga ou recriação de dados apagados.
+
+TypeScript, build e 7 testes passaram. Novo teste usa Firestore simulado para ID, filtro por proprietário, ordem e falha de exclusão. Não houve teste real dos botões em sessão Google autenticada nem IA paga. Bundle mantém aviso de tamanho. Esta rodada ainda não foi enviada/publicada: AGENTS.md exige apresentar resultados e pedir autorização específica antes do push (gera Preview) e da publicação Production. A aprovação anterior valeu para a rodada anterior.
+
+Próximo passo: obter autorização para push/Preview e Production desta rodada, enviar a branch, conferir CI e Preview exatos, testar salvar/excluir com registros controlados autenticados e então publicar somente com aprovação correspondente. Alinhar main com produção por revisão/merge do PR original. Permanecem segunda conta Google real, cotas/IA com custo controlado, Blaze/regras Storage e App Check. Não repetir chaves nem solicitar seus valores.
+
 Continue o HYPE CREATOR STUDIO 2.0 no mesmo GitHub: https://github.com/hipecreator20/jairobahia . Sincronize o remoto, leia AGENTS.md e docs/DEPLOY.md antes de editar, preserve trabalho existente e use alterações pequenas. O histórico de chats não se sincroniza entre contas.
 
 ## Regra do proprietário

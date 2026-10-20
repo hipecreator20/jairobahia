@@ -28,7 +28,7 @@ export function subscribeProjects(
     (snapshot) => {
       const list: Project[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Project);
+        list.push({ ...docSnap.data(), id: docSnap.id } as Project);
       });
       // Sort client-side by createdAt descending
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

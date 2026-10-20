@@ -20,6 +20,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
 import { Character, PromptVersion } from '../types';
 import { subscribeCharacters } from '../firebase/services/characterService';
 import {
@@ -96,6 +97,7 @@ const ASPECT_RATIOS = [
 
 export const PromptLab: React.FC = () => {
   const { user } = useAuth();
+  const { deleting, deleteMessage, removeItem } = useDeleteFeedback();
   const [activeTab, setActiveTab] = useState<'gerar' | 'salvos'>('gerar');
 
   // Form State
@@ -185,7 +187,7 @@ export const PromptLab: React.FC = () => {
   };
 
   const handleSaveToLibrary = async () => {
-    if (!generatedPrompt || !user) return;
+    if (!generatedPrompt || !user || isSaving) return;
     setIsSaving(true);
     try {
       await savePromptVersion({
@@ -205,12 +207,7 @@ export const PromptLab: React.FC = () => {
   };
 
   const handleDeleteSavedPrompt = async (id: string) => {
-    if (!confirm('Deseja realmente excluir este prompt salvo?')) return;
-    try {
-      await deletePromptVersion(id);
-    } catch (err: any) {
-      alert('Falha ao excluir prompt.');
-    }
+    await removeItem('prompt salvo', () => deletePromptVersion(id));
   };
 
   const filteredPrompts = savedPrompts.filter((p) => {
@@ -224,6 +221,7 @@ export const PromptLab: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 max-w-6xl">
+      {deleteMessage && <p role="status" className="rounded-xl border border-zinc-700 p-3 text-sm text-zinc-200">{deleteMessage}</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -802,7 +800,7 @@ export const PromptLab: React.FC = () => {
                         )}
                       </button>
                       <button
-                        onClick={() => handleDeleteSavedPrompt(p.id)}
+                        disabled={deleting} onClick={() => handleDeleteSavedPrompt(p.id)}
                         className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-[#201010] transition-colors cursor-pointer"
                         title="Excluir prompt"
                       >

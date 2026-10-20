@@ -28,7 +28,7 @@ export function subscribePrompts(
     (snapshot) => {
       const list: PromptVersion[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as PromptVersion);
+        list.push({ ...docSnap.data(), id: docSnap.id } as PromptVersion);
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       onUpdate(list);

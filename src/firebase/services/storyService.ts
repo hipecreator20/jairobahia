@@ -8,7 +8,7 @@ import {
   deleteDoc,
   getDocs,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../config';
+import { auth, db, handleFirestoreError, OperationType } from '../config';
 import { Story, Scene } from '../../types';
 
 const STORIES_COLLECTION = 'stories';
@@ -32,7 +32,7 @@ export function subscribeStories(
     (snapshot) => {
       const list: Story[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Story);
+        list.push({ ...docSnap.data(), id: docSnap.id } as Story);
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       onUpdate(list);
@@ -97,17 +97,14 @@ export async function updateStory(
 export async function deleteStory(storyId: string): Promise<void> {
   try {
     const docRef = doc(db, STORIES_COLLECTION, storyId);
+    // Keep the story recoverable if scene cleanup fails; scope the query to its owner.
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Sessão necessária para excluir a história.');
+    const q = query(collection(db, SCENES_COLLECTION), where('ownerId', '==', uid), where('storyId', '==', storyId));
+    const scenesSnap = await getDocs(q);
+    const deletePromises = scenesSnap.docs.map((d) => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
     await deleteDoc(docRef);
-
-    // Also remove scenes belonging to this story
-    try {
-      const q = query(collection(db, SCENES_COLLECTION), where('storyId', '==', storyId));
-      const scenesSnap = await getDocs(q);
-      const deletePromises = scenesSnap.docs.map((d) => deleteDoc(d.ref));
-      await Promise.all(deletePromises);
-    } catch {
-      // Scene cleanup best effort
-    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${STORIES_COLLECTION}/${storyId}`);
     throw error;
@@ -134,7 +131,7 @@ export function subscribeScenes(
     (snapshot) => {
       const list: Scene[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Scene);
+        list.push({ ...docSnap.data(), id: docSnap.id } as Scene);
       });
       list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       onUpdate(list);

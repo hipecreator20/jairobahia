@@ -28,7 +28,7 @@ export function subscribeCharacters(
     (snapshot) => {
       const list: Character[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Character);
+        list.push({ ...docSnap.data(), id: docSnap.id } as Character);
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       onUpdate(list);

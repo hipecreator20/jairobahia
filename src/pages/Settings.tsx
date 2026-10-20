@@ -39,6 +39,7 @@ export const Settings: React.FC = () => {
   const [defaultAspect, setDefaultAspect] = useState(profile?.preferences?.defaultAspect || '16:9');
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     loadStatuses();
@@ -116,7 +117,8 @@ export const Settings: React.FC = () => {
   };
 
   const handleSavePreferences = async () => {
-    if (!user) return;
+    if (!user || savingPrefs) return;
+    setSaveError('');
     setSavingPrefs(true);
     setSavedSuccess(false);
     try {
@@ -129,6 +131,7 @@ export const Settings: React.FC = () => {
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
       console.error('Erro ao salvar preferências:', err);
+      setSaveError('Não foi possível salvar suas preferências. Confira sua conexão e tente novamente.');
     } finally {
       setSavingPrefs(false);
     }
@@ -136,6 +139,7 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12 max-w-5xl">
+      {saveError && <p role="alert" className="rounded-xl border border-red-900 p-4 text-sm text-red-300">{saveError}</p>}
       {/* Title */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">

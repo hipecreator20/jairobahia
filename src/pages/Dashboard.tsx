@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
+import { CreativeReferences } from '../components/common/CreativeReferences';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -602,6 +603,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* ------------------------------------------------------------------ */}
       {/* MODALS                                                             */}
       {/* ------------------------------------------------------------------ */}
+      <CreativeReferences />
       <ProjectModal
         isOpen={isNewProjectModalOpen || Boolean(editingProject)}
         projectToEdit={editingProject}

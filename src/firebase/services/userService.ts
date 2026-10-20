@@ -85,6 +85,8 @@ export async function updateUserPreferences(
         updatedAt: new Date().toISOString(),
       };
       await setDoc(docRef, updated, { merge: true });
+    } else {
+      throw new Error('Perfil não encontrado. Entre novamente antes de salvar.');
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION_NAME}/${userId}`);
