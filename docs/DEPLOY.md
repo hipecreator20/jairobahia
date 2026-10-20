@@ -61,3 +61,11 @@ O segredo VERCEL_AUTOMATION_BYPASS_SECRET foi cadastrado criptografado no GitHub
 Branch preparada com cadastro Google pendente, Master identificado pelo UID no cliente, nas regras e no backend, painel /admin com dados em tempo real, gestão de status e planos, alertas, acessos e cotas. APIs verificam aprovação e aplicam limites mensais transacionais; pagamentos seguem desativados. O selo “Fase 1” foi removido.
 
 Validação local: TypeScript, dois testes e build passaram. Regras Firestore/Storage ainda precisam ser testadas no emulador e implantadas após revisão. A Vercel requer FIREBASE_SERVICE_ACCOUNT_JSON para ações Admin e cotas, GEMINI_API_KEY para IA e, se App Check for ativado, sua chave pública. Storage requer Blaze; o projeto segue no Spark. Nenhum merge, deploy de produção ou alteração remota de regras foi realizado.
+
+## Publicação aprovada — 20/10/2026
+
+O usuário aprovou explicitamente a publicação em produção e pediu para ignorar o teste adicional de acesso. FIREBASE_SERVICE_ACCOUNT_JSON e GEMINI_API_KEY foram configuradas como segredos em Preview e Production. A chave Gemini respondeu HTTP 200 na listagem de modelos; a credencial Admin confirmou leituras da conta Master e do Firestore existente.
+
+As regras firestore.rules desta branch foram publicadas no banco nomeado pelo console proprietário. A Vercel publicou o commit 53c24f6e3273e97ba16bf0b0cd27767dc163cacc em Production, após build aprovado. Domínio: https://jairobahia.vercel.app . Verificação real: /, /login, /dashboard e /admin retornaram 200; /api/health confirmou o commit; API de geração sem login retornou 401. Página de login renderizada com cadastro Google sujeito à aprovação, sem selo Fase 1.
+
+Publicação aprovada foi feita pela CLI a partir do Preview, sem alterar a proteção de main. O PR continua em rascunho e main ainda precisa de revisão/merge para alinhar o histórico Git com a produção. Login Google completo, aprovação de outro usuário e geração paga não foram testados ponta a ponta. Storage segue dependente do plano Blaze; regras Storage locais ainda não foram publicadas. App Check permanece opcional e não ativado. Ferramentas de teste foram instaladas fora do aplicativo; o teste extra no emulador foi dispensado pelo usuário.
