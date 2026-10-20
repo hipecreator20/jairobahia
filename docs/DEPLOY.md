@@ -1,5 +1,18 @@
 # Fluxo de publicação e estado confirmado
 
+## Gemini publicado com autorização — 20/10/2026
+
+- O proprietário aprovou por voz manter o modelo preparado e publicar. Production foi reconstruída a partir do Preview do commit exato `5a2b4bcb128bf17d2f65c5627b2e93f56b127d06`, sem merge ou mudança nas proteções. Deployment `dpl_33YKcFTW4t9mTjEouGQKk9zjWSUP`, READY, domínio https://jairobahia.vercel.app . `/api/health` retornou 200 e confirmou esse SHA; `/`, `/login`, `/dashboard` e `/admin` retornaram 200. POST `/api/gemini/generate-prompt` sem autenticação retornou 401.
+- PR incremental #5 https://github.com/hipecreator20/jairobahia/pull/5 , branch `codex/gemini-interactions-api`, base `codex/story-continuity-reference`. CI `validate` e `preview-smoke` confirmados success para o SHA publicado. Testes locais: TypeScript, 16 testes e build passaram. Não houve chamada Gemini real, troca de segredo, escrita Firebase ou gasto de IA durante a validação.
+- A Vercel concluiu o build, mas registrou TS2688 (`vite/client`) na transpilaçao da função; saúde e fronteira de autenticação passaram. Investigar esse diagnóstico antes da próxima rodada; não confundir o build READY com ausência de avisos. O bundle grande já era conhecido.
+- Pendências: geração Gemini real com teto de gasto combinado, segunda conta Google e ações Admin reais, revisão/merge dos PRs empilhados, Storage/Blaze com teto específico e App Check. A foto de AI Studio continha ID de projeto, não API key; o segredo atual permaneceu protegido. A autorização cobre esta publicação e seu registro; futuras publicações exigem nova autorização.
+
+## Atualização Gemini preparada — 20/10/2026
+
+- Branch nova `codex/gemini-interactions-api`, partindo da versão publicada, migra as chamadas de texto, imagem, personagens, histórias e áudio de `generateContent` para Gemini Interactions API v1. Requisições são stateless (`store:false`) e o default de texto passa a `gemini-3.8-flash`; imagem continua em `gemini-3.1-flash-image`. O SDK já resolvido no lockfile é compatível.
+- Testes locais desta rodada: TypeScript e build passaram; 16 testes passaram após incluir 2 testes de normalização/saída da nova API. Não foi feita chamada real Gemini, para não gerar custo. A chave atual Vercel continua protegida e não foi impressa/rotacionada.
+- O print do AI Studio mostra o projeto `gen-lang-client-0084582281`, mas não mostra uma API key. Esse ID não substitui a chave da Gemini API, não serve para inferi-la e não altera o Firebase existente (`gen-lang-client-0704234685`). Se o proprietário quiser usar a nova associação projeto/chave, precisa criar/copiar a API key desse projeto e substituir o segredo Vercel em Preview e Production sem colá-la no chat. A alteração de código não foi publicada em Production nesta rodada; aguarda autorização para deploy, conforme a regra do proprietário.
+
 ## Estado mais recente — continuação, áudio e créditos (20/10/2026)
 
 - Código publicado em Production pela Vercel após autorização expressa do proprietário: commit `b6bcab72b170a6b21050cac63ff356c0de012cc7`, deployment `dpl_7xptdmEtRn4knXkM6HjviDwQV8Y2`, READY, alias https://jairobahia.vercel.app . `/api/health` confirmou o SHA exato. `/`, `/login`, `/dashboard` e `/admin` responderam HTTP 200; `/api/billing` e `/api/gemini/analyze-audio` sem token responderam HTTP 401.
