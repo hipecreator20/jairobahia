@@ -2,6 +2,10 @@
 
 Leia este arquivo e `docs/DEPLOY.md` antes de continuar. Repositório: https://github.com/hipecreator20/jairobahia . Produção: https://jairobahia.vercel.app . Preserve Firebase, layout, dados existentes e proteções da `main`. Trabalhe em branch; nunca exponha segredos.
 
+## Gemini API (rodada seguinte)
+
+Branch `codex/gemini-interactions-api` atualiza o código para Gemini Interactions API v1, usa `store:false` e modelo texto padrão `gemini-3.8-flash`; chave atual Vercel foi mantida. Não publique em Production sem pedir autorização específica. Testes sem chamada paga passaram localmente. O screenshot do usuário mostra AI Studio project ID `gen-lang-client-0084582281`, mas nenhum segredo; não confundir com o Firebase atual `gen-lang-client-0704234685`. Para trocar a chave associada àquele projeto, o proprietário deve criar a key em AI Studio e atualizá-la diretamente no segredo Vercel, Preview e Production. Nunca peça/imprima a chave no chat. Veja DEPLOY para registro e próximos passos.
+
 ## Entrega desta rodada
 
 Implementei personagens fictícios com DNA visual fixo, prompts de cena encadeados e referência por upload; análise audiovisual com marcações editáveis em milissegundos inseridas na exportação de prompts; carteira de moedas Free/Pro/Premium e cobrança atômica antes de cada geração; pagamento manual e período controlados pela Master no Admin; e upload privado com quota e expiração preparado, mas desativado até Storage estar habilitado. Os preços/quantidades ficam configuráveis no Admin. Valores iniciais: Free 10.000 moedas, Pro R$39,90/1.000.000, Premium R$79,90/3.000.000; geração de texto 1.000, imagem 10.000 e áudio 10.000 moedas. Uma geração de história custa por cena. Pagamento não é processado pelo app.

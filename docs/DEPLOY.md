@@ -1,5 +1,11 @@
 # Fluxo de publicação e estado confirmado
 
+## Atualização Gemini preparada — 20/10/2026
+
+- Branch nova `codex/gemini-interactions-api`, partindo da versão publicada, migra as chamadas de texto, imagem, personagens, histórias e áudio de `generateContent` para Gemini Interactions API v1. Requisições são stateless (`store:false`) e o default de texto passa a `gemini-3.8-flash`; imagem continua em `gemini-3.1-flash-image`. O SDK já resolvido no lockfile é compatível.
+- Testes locais desta rodada: TypeScript e build passaram; 16 testes passaram após incluir 2 testes de normalização/saída da nova API. Não foi feita chamada real Gemini, para não gerar custo. A chave atual Vercel continua protegida e não foi impressa/rotacionada.
+- O print do AI Studio mostra o projeto `gen-lang-client-0084582281`, mas não mostra uma API key. Esse ID não substitui a chave da Gemini API, não serve para inferi-la e não altera o Firebase existente (`gen-lang-client-0704234685`). Se o proprietário quiser usar a nova associação projeto/chave, precisa criar/copiar a API key desse projeto e substituir o segredo Vercel em Preview e Production sem colá-la no chat. A alteração de código não foi publicada em Production nesta rodada; aguarda autorização para deploy, conforme a regra do proprietário.
+
 ## Estado mais recente — continuação, áudio e créditos (20/10/2026)
 
 - Código publicado em Production pela Vercel após autorização expressa do proprietário: commit `b6bcab72b170a6b21050cac63ff356c0de012cc7`, deployment `dpl_7xptdmEtRn4knXkM6HjviDwQV8Y2`, READY, alias https://jairobahia.vercel.app . `/api/health` confirmou o SHA exato. `/`, `/login`, `/dashboard` e `/admin` responderam HTTP 200; `/api/billing` e `/api/gemini/analyze-audio` sem token responderam HTTP 401.
