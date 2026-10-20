@@ -12,9 +12,10 @@ import { Library } from './pages/Library';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { ProjectModal } from './components/common/ProjectModal';
+import { Admin } from './pages/Admin';
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthorized, loading } = useAuth();
+  const { isAuthorized, isOwner, loading } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +36,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!isAuthorized) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  if (location.pathname === '/admin' && !isOwner) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="min-h-screen bg-[#090909] text-white flex">
@@ -79,6 +81,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 

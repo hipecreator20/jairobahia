@@ -26,7 +26,6 @@ import {
   subscribePrompts,
   savePromptVersion,
   deletePromptVersion,
-  seedInitialPromptsIfEmpty,
 } from '../firebase/services/promptService';
 import {
   generatePromptWithGemini,
@@ -131,7 +130,6 @@ export const PromptLab: React.FC = () => {
     if (!user) return;
     const unsubChar = subscribeCharacters(user.uid, setCharacters);
     const unsubPrompt = subscribePrompts(user.uid, setSavedPrompts);
-    seedInitialPromptsIfEmpty(user.uid);
 
     return () => {
       unsubChar();

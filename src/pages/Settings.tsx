@@ -159,7 +159,7 @@ export const Settings: React.FC = () => {
 
           <div className="flex items-center gap-4">
             <img
-              src={profile?.photoURL || user?.photoURL || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+              src={profile?.photoURL || user?.photoURL || '/assets/images/avatar_lara_model_1792450194066.jpg'}
               alt="Avatar do Proprietário"
               referrerPolicy="no-referrer"
               className="w-16 h-16 rounded-2xl object-cover ring-2 ring-[#DFFF00]/30"

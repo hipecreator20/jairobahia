@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { ShieldCheck, AlertCircle, Sparkles, Lock, Loader2, ArrowRight } from 'lucide-react';
-import { useAuth, AUTHORIZED_OWNER_EMAIL } from '../context/AuthContext';
+import { AlertCircle, Sparkles, Lock, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function formatAuthError(error: any): string {
   if (!error) return 'Erro desconhecido na autenticação.';
@@ -31,14 +31,7 @@ function formatAuthError(error: any): string {
 }
 
 export const Login: React.FC = () => {
-  const {
-    signInWithGoogle,
-    isAuthorized,
-    loading: authLoading,
-    unauthorizedEmail,
-    dismissUnauthorizedNotice,
-    clearAuthError,
-  } = useAuth();
+  const { signInWithGoogle, isAuthorized, profile, loading: authLoading, clearAuthError } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -65,12 +58,7 @@ export const Login: React.FC = () => {
 
     try {
       const cred = await signInWithGoogle();
-      const email = cred.user?.email || '';
-
-      if (email.trim().toLowerCase() === AUTHORIZED_OWNER_EMAIL.trim().toLowerCase()) {
-        console.log('[HYPE AUTH] Autenticação bem-sucedida do proprietário. Redirecionando para /dashboard...');
-        navigate('/dashboard', { replace: true });
-      }
+      if (cred.user) navigate('/dashboard', { replace: true });
     } catch (err: any) {
       console.error('[HYPE AUTH] Erro capturado no Login:', err);
       setErrorMessage(formatAuthError(err));
@@ -90,7 +78,7 @@ export const Login: React.FC = () => {
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C1C14] border border-[#DFFF00]/20 text-[#DFFF00] text-xs font-semibold mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Fase 1 — Fundação Profissional</span>
+            <span>Estúdio Criativo com IA</span>
           </div>
 
           <h1 className="text-3xl font-black italic tracking-tighter text-white">
@@ -101,25 +89,9 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {/* Unauthorized user alert */}
-        {unauthorizedEmail && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs space-y-2 animate-fade-in">
-            <div className="flex items-start gap-2.5 text-red-400 font-semibold">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Acesso Bloqueado — Conta Não Autorizada</span>
-            </div>
-            <p className="text-zinc-300">
-              A conta <strong className="text-white font-mono">{unauthorizedEmail}</strong> não tem permissão para acessar este estúdio.
-            </p>
-            <p className="text-[11px] text-zinc-400">
-              O sistema é restrito e exclusivo para o proprietário autorizado: <span className="text-[#DFFF00] font-mono">{AUTHORIZED_OWNER_EMAIL}</span>.
-            </p>
-            <button
-              onClick={dismissUnauthorizedNotice}
-              className="text-xs text-[#DFFF00] hover:underline font-semibold block pt-1 cursor-pointer"
-            >
-              Tentar novamente com outra conta Google
-            </button>
+        {profile?.status && profile.status !== 'approved' && (
+          <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200">
+            Cadastro recebido. Seu acesso está {profile.status === 'pending' ? 'aguardando aprovação' : profile.status === 'suspended' ? 'suspenso' : 'rejeitado'}.
           </div>
         )}
 
@@ -138,9 +110,9 @@ export const Login: React.FC = () => {
         <div className="p-3.5 bg-[#0D0D0D] border border-[#1F1F1F] rounded-xl flex items-start gap-3 text-xs text-zinc-400">
           <Lock className="w-4 h-4 text-[#DFFF00] shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-zinc-200">Estúdio Pessoal & Seguro</p>
+              <p className="font-semibold text-zinc-200">Acesso controlado</p>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Autenticação oficial via Firebase Authentication. Apenas o proprietário autorizado tem permissão de entrada no estúdio.
+              Entre com sua conta Google. Novos acessos aguardam aprovação do administrador.
             </p>
           </div>
         </div>
@@ -183,19 +155,10 @@ export const Login: React.FC = () => {
             )}
           </button>
 
-          {/* Secure Owner Access button triggering real auth flow */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={isSubmitting || authLoading}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#1C1C14] hover:bg-[#25251a] border border-[#DFFF00]/30 text-[#DFFF00] font-semibold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-60"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Acessar como Proprietário ({AUTHORIZED_OWNER_EMAIL})</span>
-          </button>
         </div>
 
         <div className="pt-2 text-center text-[11px] text-zinc-500">
-          Hype Creator Studio 2.0 · Versão Pessoal do Proprietário
+          Hype Creator Studio 2.0
         </div>
       </div>
     </div>

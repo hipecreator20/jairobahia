@@ -128,7 +128,7 @@ export const InfluencerStudio: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img
-                      src={c.avatarUrl || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+                      src={c.avatarUrl || '/assets/images/avatar_lara_model_1792450194066.jpg'}
                       alt={c.name}
                       className="w-12 h-12 rounded-xl object-cover ring-1 ring-[#333]"
                     />
@@ -194,7 +194,7 @@ export const InfluencerStudio: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-start gap-3.5">
                       <img
-                        src={char.avatarUrl || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+                        src={char.avatarUrl || '/assets/images/avatar_lara_model_1792450194066.jpg'}
                         alt={char.name}
                         className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-[#333]"
                       />

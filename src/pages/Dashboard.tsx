@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -20,12 +21,10 @@ import { useAuth } from '../context/AuthContext';
 import { Project, Character } from '../types';
 import {
   subscribeProjects,
-  seedInitialProjectsIfEmpty,
   deleteProject,
 } from '../firebase/services/projectService';
 import {
   subscribeCharacters,
-  seedInitialCharactersIfEmpty,
 } from '../firebase/services/characterService';
 import { ProjectModal } from '../components/common/ProjectModal';
 import { CharacterModal } from '../components/common/CharacterModal';
@@ -42,6 +41,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setIsNewProjectModalOpen,
 }) => {
   const { user } = useAuth();
+  const { deleting, deleteMessage, removeItem } = useDeleteFeedback();
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -58,9 +58,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     if (!user) return;
 
-    // Seed initial demo data if empty for first time setup
-    seedInitialProjectsIfEmpty(user.uid);
-    seedInitialCharactersIfEmpty(user.uid);
+    // Empty accounts stay empty; deleted examples are not recreated.
 
     // Subscribe to projects in real-time
     const unsubProjects = subscribeProjects(
@@ -113,6 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
+      {deleteMessage && <p role="status" aria-live="polite" className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-200">{deleteMessage}</p>}
       {/* ------------------------------------------------------------------ */}
       {/* 1. HERO BANNER — Cinematic welcome matching user mockup            */}
       {/* ------------------------------------------------------------------ */}
@@ -182,7 +181,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#DFFF00]/20 to-amber-500/10 blur-xl opacity-70 group-hover:opacity-100 transition duration-500" />
               <div className="relative rounded-2xl overflow-hidden border border-[#333] shadow-2xl max-h-[290px] w-full max-w-[420px]">
                 <img
-                  src="/src/assets/images/hero_virtual_model_1792450194472.jpg"
+                  src="/assets/images/hero_virtual_model_1792450194472.jpg"
                   alt="Modelo Virtual Hype Studio"
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
@@ -215,7 +214,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <div className="flex gap-3.5 items-start">
               <img
-                src="/src/assets/images/avatar_lara_model_1792450194066.jpg"
+                src="/assets/images/avatar_lara_model_1792450194066.jpg"
                 alt="Character Studio"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-[#333] group-hover:ring-[#DFFF00]/50 transition-all"
               />
@@ -242,7 +241,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <div className="flex gap-3.5 items-start">
               <img
-                src="/src/assets/images/project_beach_day_1792450194606.jpg"
+                src="/assets/images/project_beach_day_1792450194606.jpg"
                 alt="Prompt Lab"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-[#333] group-hover:ring-[#DFFF00]/50 transition-all"
               />
@@ -269,7 +268,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <div className="flex gap-3.5 items-start">
               <img
-                src="/src/assets/images/project_city_night_1792450194169.jpg"
+                src="/assets/images/project_city_night_1792450194169.jpg"
                 alt="Story Studio"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-[#333] group-hover:ring-[#DFFF00]/50 transition-all"
               />
@@ -368,7 +367,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {/* Thumbnail image with dark scrim */}
                 <div className="relative aspect-[16/10] bg-[#1a1a1a] overflow-hidden">
                   <img
-                    src={project.thumbnail || '/src/assets/images/project_beach_day_1792450194606.jpg'}
+                    src={project.thumbnail || '/assets/images/project_beach_day_1792450194606.jpg'}
                     alt={project.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -415,12 +414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <span>Editar Projeto</span>
                         </button>
                         <button
-                          onClick={async () => {
-                            if (confirm(`Excluir o projeto "${project.title}"?`)) {
-                              await deleteProject(project.id);
-                            }
-                            setActiveMenuProjectId(null);
-                          }}
+                          disabled={deleting} onClick={() => { void removeItem(project.title, () => deleteProject(project.id)); setActiveMenuProjectId(null); }}
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-left transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -466,7 +460,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               <div className="relative w-20 h-20 rounded-xl overflow-hidden mb-2.5 ring-1 ring-[#333] group-hover:ring-[#DFFF00]/50 transition-all">
                 <img
-                  src={char.avatarUrl || '/src/assets/images/avatar_lara_model_1792450194066.jpg'}
+                  src={char.avatarUrl || '/assets/images/avatar_lara_model_1792450194066.jpg'}
                   alt={char.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />

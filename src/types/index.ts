@@ -87,6 +87,8 @@ export interface UserProfile {
   displayName?: string;
   photoURL?: string;
   isOwner: boolean;
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  plan: 'free' | 'pro' | 'premium';
   preferences?: UserPreferences;
   createdAt: string;
   updatedAt: string;

@@ -17,6 +17,15 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isMaster() {
+      return isSignedIn() && request.auth.uid == 'FTqparyG04fCf9eDgUTa6e2tWgp2';
+    }
+
+    function hasStudioAccess() {
+      return isMaster() || (isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved');
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -32,12 +41,14 @@ service cloud.firestore {
     // 1. User validation helper
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'email', 'createdAt', 'updatedAt']) &&
-             data.keys().hasOnly(['id', 'email', 'displayName', 'photoURL', 'isOwner', 'preferences', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'email', 'displayName', 'photoURL', 'isOwner', 'status', 'plan', 'preferences', 'createdAt', 'updatedAt']) &&
              data.id is string && data.id.size() <= 128 &&
              data.email is string && data.email.size() <= 256 &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
              (!('isOwner' in data) || data.isOwner is bool) &&
+             (!('status' in data) || data.status in ['pending', 'approved', 'rejected', 'suspended']) &&
+             (!('plan' in data) || data.plan in ['free', 'pro', 'premium']) &&
              data.createdAt is string && data.createdAt.size() <= 64 &&
              data.updatedAt is string && data.updatedAt.size() <= 64;
     }
@@ -152,97 +163,126 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow get: if isOwner(userId) && isValidId(userId);
-      allow list: if false; // Blanket user listing is forbidden
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == userId;
+      allow get: if isMaster() || (isOwner(userId) && isValidId(userId));
+      allow list: if isMaster();
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == userId &&
+        incoming().plan == 'free' && incoming().status == 'pending' && incoming().isOwner == false;
+      allow create: if isMaster() && isValidId(userId) && isValidUser(incoming()) && incoming().id == userId;
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) &&
-                       incoming().id == existing().id &&
-                       incoming().createdAt == existing().createdAt;
+        incoming().id == existing().id && incoming().createdAt == existing().createdAt &&
+        ((!('status' in existing()) && !('status' in incoming())) || incoming().status == existing().status) &&
+        ((!('plan' in existing()) && !('plan' in incoming())) || incoming().plan == existing().plan) &&
+        ((!('isOwner' in existing()) && !('isOwner' in incoming())) || incoming().isOwner == existing().isOwner) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'preferences', 'updatedAt']);
       allow delete: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if hasStudioAccess();
+      allow write: if isMaster();
+    }
+
+    match /accessLogs/{logId} {
+      allow get: if isMaster() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow list: if isMaster();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'event', 'createdAt', 'details']) &&
+        request.resource.data.event is string && request.resource.data.event.size() <= 80 &&
+        request.resource.data.createdAt is string &&
+        (!('details' in request.resource.data) || (request.resource.data.details is map && request.resource.data.details.size() <= 5));
+      allow update, delete: if isMaster();
+    }
+
+    match /alerts/{alertId} {
+      allow read, write: if isMaster();
+    }
+
+    match /usage/{usageId} {
+      allow read, write: if isMaster();
     }
 
     // Projects collection
     match /projects/{projectId} {
-      allow get: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(projectId) && isValidProject(incoming()) && incoming().id == projectId;
-      allow update: if isSignedIn() && isValidId(projectId) && isValidProject(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(projectId) && isValidProject(incoming()) && incoming().id == projectId;
+      allow update: if hasStudioAccess() && isValidId(projectId) && isValidProject(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(projectId) && existing().ownerId == request.auth.uid;
     }
 
     // Characters collection
     match /characters/{characterId} {
-      allow get: if isSignedIn() && isValidId(characterId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(characterId) && isValidCharacter(incoming()) && incoming().id == characterId;
-      allow update: if isSignedIn() && isValidId(characterId) && isValidCharacter(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(characterId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(characterId) && isValidCharacter(incoming()) && incoming().id == characterId;
+      allow update: if hasStudioAccess() && isValidId(characterId) && isValidCharacter(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(characterId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(characterId) && existing().ownerId == request.auth.uid;
     }
 
     // Stories collection
     match /stories/{storyId} {
-      allow get: if isSignedIn() && isValidId(storyId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(storyId) && isValidStory(incoming()) && incoming().id == storyId;
-      allow update: if isSignedIn() && isValidId(storyId) && isValidStory(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(storyId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(storyId) && isValidStory(incoming()) && incoming().id == storyId;
+      allow update: if hasStudioAccess() && isValidId(storyId) && isValidStory(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(storyId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(storyId) && existing().ownerId == request.auth.uid;
     }
 
     // Scenes collection
     match /scenes/{sceneId} {
-      allow get: if isSignedIn() && isValidId(sceneId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(sceneId) && isValidScene(incoming()) && incoming().id == sceneId;
-      allow update: if isSignedIn() && isValidId(sceneId) && isValidScene(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(sceneId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(sceneId) && isValidScene(incoming()) && incoming().id == sceneId;
+      allow update: if hasStudioAccess() && isValidId(sceneId) && isValidScene(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(sceneId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(sceneId) && existing().ownerId == request.auth.uid;
     }
 
     // ImageAssets collection
     match /imageAssets/{assetId} {
-      allow get: if isSignedIn() && isValidId(assetId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(assetId) && isValidImageAsset(incoming()) && incoming().id == assetId;
-      allow update: if isSignedIn() && isValidId(assetId) && isValidImageAsset(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(assetId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(assetId) && isValidImageAsset(incoming()) && incoming().id == assetId;
+      allow update: if hasStudioAccess() && isValidId(assetId) && isValidImageAsset(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(assetId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(assetId) && existing().ownerId == request.auth.uid;
     }
 
     // PromptVersions collection
     match /promptVersions/{promptId} {
-      allow get: if isSignedIn() && isValidId(promptId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(promptId) && isValidPromptVersion(incoming()) && incoming().id == promptId;
-      allow update: if isSignedIn() && isValidId(promptId) && isValidPromptVersion(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(promptId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(promptId) && isValidPromptVersion(incoming()) && incoming().id == promptId;
+      allow update: if hasStudioAccess() && isValidId(promptId) && isValidPromptVersion(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(promptId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(promptId) && existing().ownerId == request.auth.uid;
     }
 
     // GenerationJobs collection
     match /generationJobs/{jobId} {
-      allow get: if isSignedIn() && isValidId(jobId) && existing().ownerId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(jobId) && isValidGenerationJob(incoming()) && incoming().id == jobId;
-      allow update: if isSignedIn() && isValidId(jobId) && isValidGenerationJob(incoming()) &&
+      allow get: if hasStudioAccess() && isValidId(jobId) && existing().ownerId == request.auth.uid;
+      allow list: if hasStudioAccess() && resource.data.ownerId == request.auth.uid;
+      allow create: if hasStudioAccess() && isValidId(jobId) && isValidGenerationJob(incoming()) && incoming().id == jobId;
+      allow update: if hasStudioAccess() && isValidId(jobId) && isValidGenerationJob(incoming()) &&
                        existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && isValidId(jobId) && existing().ownerId == request.auth.uid;
+      allow delete: if hasStudioAccess() && isValidId(jobId) && existing().ownerId == request.auth.uid;
     }
   }
 }

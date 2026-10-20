@@ -29,10 +29,10 @@ interface CharacterModalProps {
 }
 
 const PRESET_AVATARS = [
-  { label: 'Lara (Modelo)', url: '/src/assets/images/avatar_lara_model_1792450194066.jpg' },
-  { label: 'Camila (Fitness)', url: '/src/assets/images/avatar_camila_fitness_1792450194470.jpg' },
-  { label: 'Bruno (Lifestyle)', url: '/src/assets/images/hero_virtual_model_1792450194472.jpg' },
-  { label: 'Julia (Fashion)', url: '/src/assets/images/project_beach_day_1792450194606.jpg' },
+  { label: 'Lara (Modelo)', url: '/assets/images/avatar_lara_model_1792450194066.jpg' },
+  { label: 'Camila (Fitness)', url: '/assets/images/avatar_camila_fitness_1792450194470.jpg' },
+  { label: 'Bruno (Lifestyle)', url: '/assets/images/hero_virtual_model_1792450194472.jpg' },
+  { label: 'Julia (Fashion)', url: '/assets/images/project_beach_day_1792450194606.jpg' },
 ];
 
 export const CharacterModal: React.FC<CharacterModalProps> = ({
