@@ -1,5 +1,15 @@
 # Fluxo de publicação e estado confirmado
 
+## Continuação — correção de plano Admin (20/10/2026)
+
+Branch `codex/admin-plan-backend`, baseada em `b7ce583`. O seletor de plano usa agora PATCH `/api/admin/users/:uid/plan`, sem escrita direta no perfil. Backend verifica token com revogação, exige UID Master, aceita somente free/pro/premium e grava plano e auditoria no mesmo batch. Layout, regras, configuração Firebase e dados remotos preservados. Nenhuma chamada paga de IA realizada.
+
+Verificações: TypeScript e três testes locais passaram, incluindo a nova matriz de autorização/validação de plano com dependências simuladas. A primeira execução no sandbox falhou com EPERM; testes passaram fora dessa restrição. Esses testes não substituem testes das regras no emulador ou com segunda conta. O resultado da execução isolada anterior de segurança não foi recuperado. CI anterior de b7ce583 confirmado como success: https://github.com/hipecreator20/jairobahia/actions/runs/39368369955 .
+
+Produção consultada em `/api/health`: https://jairobahia.vercel.app continua servindo `53c24f6e3273e97ba16bf0b0cd27767dc163cacc`. PR #1 confirmado aberto e em rascunho, base main, head b7ce583. Nenhum merge ou deploy de produção nesta continuação.
+
+Claims: o cliente não força getIdToken(true) ao receber mudança de status; a API e as regras consultam o perfil para autorização. Renovação após aprovação e recuperação após revogação continuam exigindo teste real. Pendentes: regras no emulador, segunda conta (cadastro/aprovação/suspensão), troca de plano ponta a ponta, geração e limites com gasto controlado. Storage continua sem upgrade Blaze e regras não publicadas; App Check não ativado. Próximo passo: validar Preview, revisar a correção e integrá-la à branch do PR #1 antes do merge aprovado em main. Deploy de produção, gastos/upgrade e ativação de serviços dependem de autorização específica; nenhuma proteção deve ser removida.
+
 ## Identidades existentes
 
 - GitHub: hipecreator20/jairobahia; produção desejada: main.

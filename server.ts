@@ -1,4 +1,5 @@
 import express from 'express';
+import { createPlanHandler } from './admin-plan.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { cert, initializeApp, getApps } from 'firebase-admin/app';
@@ -138,6 +139,22 @@ app.use('/api', async (req, res, next) => {
     return res.status(503).json({ success: false, message: 'Não foi possível validar as permissões agora.' });
   }
 });
+
+app.patch('/api/admin/users/:uid/plan', createPlanHandler({
+  masterUid: MASTER_UID,
+  verifyToken: token => getAuth(adminApp).verifyIdToken(token, true),
+  updatePlan: async (uid, plan, actorUid) => {
+    if (!serviceAccount) throw new Error('Firebase Admin unavailable');
+    const store = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
+    const batch = store.batch();
+    const updatedAt = new Date().toISOString();
+    batch.update(store.collection('users').doc(uid), { plan, updatedAt });
+    batch.create(store.collection('accessLogs').doc(), {
+      uid, event: 'plan_changed', createdAt: updatedAt, details: { actorUid, plan },
+    });
+    await batch.commit();
+  },
+}));
 
 app.patch('/api/admin/users/:uid/status', async (req, res) => {
   const actorUid = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
