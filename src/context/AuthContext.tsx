@@ -63,8 +63,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('[HYPE AUTH] Cadastro inicial aguardando regras atualizadas:', error);
       }
       let loggedLogin = false;
+      let previousStatus: UserProfile['status'] | undefined;
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
         const data = snapshot.exists() ? snapshot.data() as UserProfile : null;
+        if (data?.status === 'approved' && previousStatus !== 'approved') {
+          void firebaseUser.getIdToken(true).catch(() => {
+            if (auth.currentUser === firebaseUser) setAuthError('Entre novamente para atualizar as permissões da sua sessão.');
+          });
+        }
+        previousStatus = data?.status;
         setProfile(data ? { ...data, isOwner: firebaseUser.uid === MASTER_UID } : null);
         if (data && !loggedLogin) void addDoc(collection(db, 'accessLogs'), {
           uid: firebaseUser.uid, email: firebaseUser.email || '', event: 'login', createdAt: new Date().toISOString(),

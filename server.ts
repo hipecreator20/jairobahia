@@ -169,10 +169,13 @@ app.patch('/api/admin/users/:uid/status', async (req, res) => {
     const auth = getAuth(adminApp);
     const target = await auth.getUser(uid);
     const store = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
-    await store.collection('users').doc(uid).update({ status, updatedAt: new Date().toISOString() });
+    const profileRef = store.collection('users').doc(uid);
+    // Denials take effect in Firestore before changing claims; approvals publish last.
+    if (status !== 'approved') await profileRef.update({ status, updatedAt: new Date().toISOString() });
     const claims = { ...target.customClaims, approved: status === 'approved' };
     await auth.setCustomUserClaims(uid, claims);
     if (status !== 'approved') await auth.revokeRefreshTokens(uid);
+    if (status === 'approved') await profileRef.update({ status, updatedAt: new Date().toISOString() });
     await store.collection('accessLogs').add({ uid, email: target.email || '', event: `access_${status}`, createdAt: new Date().toISOString(), details: { actorUid: actor.uid } });
     return res.json({ success: true, status });
   } catch (error) {
