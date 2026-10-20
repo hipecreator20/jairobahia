@@ -1,3 +1,7 @@
+# Rodada atual: reparar falhas reais
+
+Leia o último registro de docs/DEPLOY.md. Branch codex/fix-generation-credits. Atualização preparada com GenerateContent, créditos v2 e estornos, Admin organizado. Aguardar registro de SHA/produção verificada ao fim desta rodada. Não tratar os smoke tests históricos abaixo como prova de geração. Mercado Pago ainda precisa de conexão; nenhuma cobrança Pix ativada.
+
 # Continuação do HYPE CREATOR STUDIO 2.0
 
 Leia este arquivo e `docs/DEPLOY.md` antes de continuar. Repositório: https://github.com/hipecreator20/jairobahia . Produção: https://jairobahia.vercel.app . Preserve Firebase, layout, dados existentes e proteções da `main`. Trabalhe em branch; nunca exponha segredos.
