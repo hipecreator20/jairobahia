@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV = 'test';
-const { app } = await import('../server');
+const { default: app } = await import('../api/index.js');
 test('API refuses spoofed owner email without Firebase token', async () => {
  const server = app.listen(0, '127.0.0.1');
  await new Promise<void>(resolve => server.once('listening', resolve));
