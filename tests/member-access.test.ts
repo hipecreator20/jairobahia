@@ -49,7 +49,7 @@ test('approved second account reaches every AI route; pending and exhausted acco
       // Reaches the unconfigured provider boundary, never the obsolete owner-email rejection.
       assert.notEqual(response.status, 403, `${path}: ${data.message}`);
       assert.equal(data.success, false);
-      assert.match(data.message, /GEMINI_API_KEY|GoogleGenAI|IA indisponível/);
+      assert.match(data.message, /GEMINI_API_KEY|GoogleGenAI|IA indisponível|configuração de IA/);
       assert.equal(spent,0,`${path} must refund before returning an error`);
     }
     status = 'pending';

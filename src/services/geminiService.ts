@@ -244,5 +244,9 @@ export async function authenticatedFetch(input: RequestInfo | URL, init: Request
   if (!response.headers.get('Content-Type')?.includes('application/json')) {
     return new Response(JSON.stringify({success:false,message:'O servidor não concluiu a solicitação. Atualize o saldo em dois minutos; reservas de gerações interrompidas são estornadas automaticamente.'}), {status:response.ok?502:response.status,headers:{'Content-Type':'application/json'}});
   }
+  if (!response.ok) {
+    const data = await response.clone().json().catch(() => null);
+    if (data?.requestId) return new Response(JSON.stringify({...data,message:`${data.message || 'Falha na solicitação.'} Referência: ${data.requestId}`}),{status:response.status,headers:response.headers});
+  }
   return response;
 }

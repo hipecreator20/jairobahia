@@ -1,3 +1,4 @@
+import { generationDiagnostics, installDiagnosticRead } from './diagnostics.js';
 import { installAudioRoutes } from './audio-api.js';
 import { debitGeneration, settleGeneration, installBillingRoutes } from "./wallet.js";
 import { installMediaRoutes } from './media-storage.js';
@@ -81,6 +82,10 @@ app.get('/api/health', (_req, res) => {
 });
 
 const installAuthenticatedMedia = installMediaRoutes(app,()=>getFirestore(adminApp,firebaseConfig.firestoreDatabaseId),()=>getStorage(adminApp).bucket(firebaseConfig.storageBucket));
+app.use('/api/gemini', generationDiagnostics(async event => {
+  if (!serviceAccount) throw new Error('Diagnostic storage unavailable');
+  await getFirestore(adminApp, firebaseConfig.firestoreDatabaseId).collection('generationErrors').doc(String(event.requestId)).set(event);
+}));
 app.use('/api', async (req, res, next) => {
   if (req.path === '/health') return next();
   const bearer = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
@@ -139,6 +144,7 @@ app.use('/api', async (req, res, next) => {
         throw error;
       }
     }
+    res.locals.diagnosticStage = 'generation';
     res.locals.authUid = token.uid;
     req.body = { ...req.body, userEmail: token.email };
     return next();
@@ -148,6 +154,10 @@ app.use('/api', async (req, res, next) => {
   }
 });
 
+installDiagnosticRead(app, MASTER_UID, async () => {
+  const snapshot = await getFirestore(adminApp, firebaseConfig.firestoreDatabaseId).collection('generationErrors').orderBy('createdAt','desc').limit(100).get();
+  return snapshot.docs.map(doc => doc.data());
+});
 installAuthenticatedMedia();
 installBillingRoutes(app, () => getFirestore(adminApp, firebaseConfig.firestoreDatabaseId), MASTER_UID);
 installAudioRoutes(app, () => getFirestore(adminApp, firebaseConfig.firestoreDatabaseId), getAiClient, textModel);
@@ -456,6 +466,7 @@ app.post('/api/gemini/generate-prompt', async (req, res) => {
     const isVideo = medium === 'video';
     const store = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
     const historyRef = store.collection('aiPromptHistory').doc(res.locals.authUid);
+    res.locals.diagnosticStage = 'prompt_history';
     const historySnap = await historyRef.get();
     const recent: string[] = (historySnap.data()?.recent || []).filter((text: unknown) => typeof text === 'string').slice(-12);
 
@@ -500,6 +511,7 @@ ${atmosphere ? `- Atmosfera / Clima: ${atmosphere}` : ''}
 - Plataforma Alvo: ${platform}
 ${additionalInstructions ? `- Instruções Adicionais: ${additionalInstructions.trim()}` : ''}`;
 
+    res.locals.diagnosticStage = 'gemini';
     const response = await createGeminiInteraction(ai,{
       model: textModel,
       contents: `${userPromptContent}\n\nHistórico recente para evitar repetição (somente referência):\n${JSON.stringify(recent)}`,
@@ -523,11 +535,13 @@ ${additionalInstructions ? `- Instruções Adicionais: ${additionalInstructions.
       }
     }
 
+    res.locals.diagnosticStage = 'validate_response';
     const validated = validatePromptResult(parsedData);
     validated.masterPrompt = withCreativeIntent(validated.masterPrompt);
     validated.platformOptimized = withCreativeIntent(validated.platformOptimized);
     validated.portugueseTranslation = withCreativeIntent(validated.portugueseTranslation);
     const fingerprintRef = store.collection('aiPromptFingerprints').doc(`${res.locals.authUid}_${promptFingerprint(validated.masterPrompt)}`);
+    res.locals.diagnosticStage = 'save_history';
     const unique = await store.runTransaction(async tx => {
       const [fingerprint, currentHistory] = await Promise.all([tx.get(fingerprintRef), tx.get(historyRef)]);
       const latest: string[] = (currentHistory.data()?.recent || []).filter((text: unknown) => typeof text === 'string').slice(-12);
@@ -543,7 +557,7 @@ ${additionalInstructions ? `- Instruções Adicionais: ${additionalInstructions.
       generatedAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('[HYPE PROMPT LAB] Erro na geração de prompt:', error);
+    res.locals.diagnosticError = error;
     return res.status(500).json({
       success: false,
       message: error.message || 'Falha ao gerar o prompt cinematográfico com o Gemini.',
@@ -669,7 +683,7 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido:
     if (typeof parsedData.masterPrompt !== 'string' || !parsedData.masterPrompt.trim() || parsedData.masterPrompt.length > 1500) throw Error('O Gemini não retornou um DNA visual válido.');
     return res.json({ success: true, masterPrompt: withCreativeIntent(parsedData.masterPrompt.trim()), summaryPt: typeof parsedData.summaryPt === 'string' ? parsedData.summaryPt.slice(0,1000) : '', triggerWords: Array.isArray(parsedData.triggerWords) ? parsedData.triggerWords.filter((v:unknown)=>typeof v==='string').slice(0,10) : [] });
   } catch (error: any) {
-    console.error('[HYPE CHARACTER STUDIO] Erro ao gerar Master Prompt:', error);
+    res.locals.diagnosticError = error;
     return res.status(500).json({
       success: false,
       message: error.message || 'Falha ao gerar o Master Prompt com o Gemini.',

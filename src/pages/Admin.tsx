@@ -1,3 +1,4 @@
+import { AdminDiagnostics } from '../components/common/AdminDiagnostics';
 import { normalizedCosts, normalizedAllowance } from '../../credit-pricing';
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -17,7 +18,7 @@ const labels = { pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado
 
 export const Admin: React.FC = () => {
   const { isOwner } = useAuth();
-  const [tab, setTab] = useState<'users' | 'access' | 'alerts' | 'plans' | 'billing' | 'settings'>('users');
+  const [tab, setTab] = useState<'users' | 'access' | 'alerts' | 'plans' | 'billing' | 'diagnostics' | 'settings'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [logs, setLogs] = useState<Record<string, any>[]>([]);
   const [usage, setUsage] = useState<Record<string, any>[]>([]);
@@ -83,8 +84,9 @@ export const Admin: React.FC = () => {
   return <section className="space-y-5">
     <header><h1 className="text-2xl font-bold text-white">Administração</h1><p className="text-sm text-zinc-400">Usuários, acessos, alertas e planos do estúdio.</p></header>
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Contas',users.length],['Aprovados',users.filter(u=>u.status==='approved').length],['Pendentes',users.filter(u=>u.status==='pending').length],['Suspensos',users.filter(u=>u.status==='suspended').length]].map(([label,value])=><div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"><p className="text-xs text-zinc-400">{label}</p><strong className="text-2xl text-lime-200">{value}</strong></div>)}</div>
-    <nav className="flex flex-wrap gap-2">{button('users','Usuários')}{button('access','Acessos')}{button('alerts','Alertas')}{button('plans','Planos e créditos')}{button('billing','Pagamentos')}{button('settings','Configurações')}</nav>
+    <nav className="flex flex-wrap gap-2">{button('users','Usuários')}{button('access','Acessos')}{button('alerts','Alertas')}{button('plans','Planos e créditos')}{button('billing','Pagamentos')}{button('diagnostics','Erros e diagnóstico')}{button('settings','Configurações')}</nav>
     {message && <p role={actionError ? 'alert' : 'status'} aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm ${actionError ? 'border-red-800 bg-red-950/40 text-red-200' : 'border-lime-900 bg-lime-950/30 text-lime-200'}`}>{message}</p>}
+    {tab === 'diagnostics' && <AdminDiagnostics />}
     {tab === 'billing' && <AdminSubscriptions users={users} />}
     {tab === 'users' && <div className="space-y-3">
 

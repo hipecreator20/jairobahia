@@ -149,3 +149,25 @@ Créditos v2: 1 por texto/cena, 10 por imagem/áudio; Free 10, Pro 1.000 e Premi
 Admin com indicadores, aba Pagamentos separada e recibos manuais com valor efetivamente recebido (somente Master no servidor, registro idempotente ao repetir a mesma assinatura). Receitas exibidas são dos últimos 100 recibos, não estimativas de lucro; assinaturas antigas não geram receita fictícia. Mercado Pago não conectado: painel abriu login, sem credenciais/QR real; checkout automático segue pendente. Settings corrige rótulo de proprietário para membros. Prompt Director usa geração real do Prompt Lab; Character Studio prioriza prompt textual com upload, retirando botão de geração de imagem dessa ficha. Upload persistente segue desligado.
 
 Validação local: TypeScript, 18 testes e build passaram. Testes incluem serialização SDK, referência multimodal, estorno duplicado, períodos, débito concorrente, proteção Master e erros de API. Aviso de bundle >500 kB permanece. Produção ainda será verificada nesta rodada; não considerar este registro confirmação de deploy.
+
+## Recuperação local — 20/10/2026
+
+Projeto clonado integralmente de https://github.com/hipecreator20/jairobahia.git para outputs/jairobahia nesta sessão Codex. Branch selecionada: codex/fix-generation-credits; HEAD d1724f7a0ddf858dd0dd0852a8f67dd6089507f3. Histórico Git e branches remotas preservados.
+
+Vercel confirmou jairobahia.vercel.app no deployment dpl_AKiSv2RpWmxRGsigcrTFjPNk1Uvm, READY em Production, associado ao mesmo SHA. npm ci, npm run lint, npm test (18/18) e npm run build passaram. Build mantém aviso de bundle acima de 500 kB. Não foram testados login Google ou geração paga reais. Credenciais de produção não foram copiadas para o ambiente local. Nenhum push, merge ou deploy foi feito nesta recuperação.
+
+Continuidade: docs/CONTINUACAO-RESGATE.md. Próximo passo depende das atualizações que o proprietário solicitar. Publicação exige autorização explícita para a rodada correspondente.
+
+## Diagnóstico administrativo e créditos — 20/10/2026
+
+Alterações locais sobre d1724f7: nova aba Admin > Erros e diagnóstico, API de leitura exclusiva do Master e registros persistentes em generationErrors via Firebase Admin. Falhas JSON das rotas /api/gemini recebem UUID, horário, rota, HTTP, duração, etapa, categoria e orientação; metadados são limitados explicitamente, sem prompts, corpos de requisição ou credenciais. Falha de persistência mantém a resposta e registra referência no runtime; espera limitada a 1,5 s. Não captura encerramentos da hospedagem antes da resposta nem importa logs antigos. Histórico limitado aos 100 registros mais recentes na consulta; retenção automática não implementada.
+
+Vercel consultada: produção dpl_AKiSv2RpWmxRGsigcrTFjPNk1Uvm apresentou três ocorrências recentes de 504 Deadline exceeded no Prompt Lab e duas de 503 high demand no Character Studio. São falhas reportadas pelo provedor; nenhuma geração remota paga foi executada e recuperação do serviço não foi confirmada. Mensagens ao usuário passam a ser seguras e trazer referência de diagnóstico.
+
+WalletPanel redesenhado com saldo em destaque, consumo acessível, custos por geração, resumo compacto lateral e extrato em português com devoluções distintas. Detalhes técnicos recolhidos. Mantidos saldo e regras de cobrança. Prévia local dos componentes reais com serviços simulados em http://127.0.0.1:4174; dados demonstrativos identificados. Captura em outputs/previa-creditos-diagnostico.png (na raiz do espaço de trabalho). Não equivale a validação com conta real.
+
+Validação final: npm test 20/20; npm run lint e npm run build aprovados. Aviso existente de bundle >500 kB. Testes novos verificam classificação de 504/503/cota, ausência de dados brutos, referência consistente, resposta preservada com falha do log e bloqueio de consulta para não Master. Teste de acesso atualizado para a mensagem segura. Sem novo commit, push, merge, alteração de regras Firebase ou deploy. Publicação depende de autorização explícita conforme AGENTS.md. Próximo destino sugerido: Preview da branch atual; produção permanece no SHA anteriormente confirmado d1724f7.
+
+## Autorização do Preview — 20/10/2026
+
+Proprietário respondeu “sim” ao envio desta rodada (diagnóstico administrativo e painel de créditos) para Preview. Autorizado commit e push da branch codex/fix-generation-credits para o Preview da Vercel. Não há autorização de merge ou promoção a Production. Validação local desta rodada: 20 testes, lint e build aprovados. Resultado remoto será registrado após publicação.
