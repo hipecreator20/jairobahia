@@ -177,3 +177,31 @@ Proprietário respondeu “sim” ao envio desta rodada (diagnóstico administra
 Commit local preparado: 9694d180193b68f2b83e5f7b4ade2a264020d179. O push não foi concluído: Git Credential Manager não encontrou autenticação GitHub e a tentativa sem interação retornou Cannot prompt / could not read Username. Fluxo de login por dispositivo iniciado, sem código retornado, e cancelado para não deixar autenticação pendente. Plugin GitHub foi oferecido para instalação/conexão; ainda não conectado. A branch remota permanece d1724f7 e a Vercel não retornou deployment para 9694d18. Nenhum Preview novo confirmado; Production não alterada. Aguardar conexão GitHub do proprietário, então reenviar o commit já autorizado e validar o Preview. Aprovação para Production continua ausente.
 
 Acesso Git restabelecido em 20/10/2026 pelo fluxo oficial de dispositivo, conta hipecreator20 confirmada no navegador; autorização existente do Git Credential Manager renovada. Push/Preview desta rodada seguem autorizados; Production não autorizada. Retomar envio do código 9694d18 com estes registros documentais.
+
+## Preview publicado e validado — 20/10/2026
+
+Push autorizado concluído para codex/fix-generation-credits. Código 9694d180193b68f2b83e5f7b4ade2a264020d179 e documentação ffb52984fcfaa47ccc5747e34bfd9b888b464756 enviados ao GitHub. Preview READY: https://jairobahia-atjdlao0l-mhrsuporteti-5479.vercel.app, deployment dpl_Ht3Vbo1p3bcnijzsdTT6WcYgn2Lm. /api/health respondeu 200 e confirmou o SHA ffb52984fcfaa47ccc5747e34bfd9b888b464756. Navegador exibiu login da aplicação; /api/admin/diagnostics sem sessão respondeu Autenticação necessária.
+
+GitHub Actions run https://github.com/hipecreator20/jairobahia/actions/runs/39461011389 concluiu com Success: validate (16s) e preview-smoke (36s). O smoke verifica página, health/commit e 401 da geração sem token. Nenhuma geração paga realizada manualmente. Painel Master autenticado e escrita real de erro ainda não verificados nesta sessão. Vercel mantém Production em d1724f7 / dpl_AKiSv2RpWmxRGsigcrTFjPNk1Uvm. Nenhum merge ou promoção. Evidência visual: outputs/preview-validado.png na raiz do espaço local. Este registro pós-validação é local; documentação de autorização e continuidade até ffb5298 já está no GitHub.
+
+## Autorização de Production — 20/10/2026
+
+Após receber o resumo do Preview e dos testes reais, proprietário respondeu: autorizo, faça agora. Autorização específica para publicar esta rodada (novo painel de créditos e diagnóstico Admin) em jairobahia.vercel.app. Promoção direta do Preview pela API retornou 422; iniciado rebuild em Production a partir do mesmo deployment aprovado, sem buscar latest commit. SHA preservado ffb52984fcfaa47ccc5747e34bfd9b888b464756. Novo deployment dpl_DkMkxKCkkmvcXPRBeG9pUj7GTcF2, origem redeploy; resultado ainda em verificação. Não autoriza futuras rodadas nem merge de branches.
+
+## Production confirmada — 20/10/2026
+
+Production READY no deployment dpl_DkMkxKCkkmvcXPRBeG9pUj7GTcF2, domínio https://jairobahia.vercel.app, SHA ffb52984fcfaa47ccc5747e34bfd9b888b464756. /api/health confirmou SHA, status online e deploymentCheck ready. Smoke no domínio principal passou: SPA 200, health 200/commit exato e geração sem token rejeitada com 401. O script não faz chamadas Gemini; a nova instrumentação pode registrar a tentativa 401 em generationErrors (a frase antiga do smoke No Firebase writes não descreve essa nova instrumentação). Navegador confirmou login e health de produção. Créditos e logs Admin publicados. Sem merge, alteração de regras ou credenciais. Autorização cobriu exatamente esta publicação, não futuras. Login Master e geração remota paga ainda não foram testados nesta rodada; não afirmar recuperação garantida do Gemini. Screenshot local outputs/producao-confirmada.png na raiz do espaço. Registros pós-validação ficam locais; nenhum novo push que dispararia outro Preview foi realizado.
+
+## Correção local do timeout do Prompt Lab — 20/10/2026
+
+Referência enviada pelo usuário: 34e8b139-95ea-4fa5-8677-3f5e5486c002. Runtime de Production registrou GEMINI_TIMEOUT em 17:12:53 UTC, etapa gemini, duração 44195ms, SHA ffb5298. O evento não distingue deadline do provedor e timeout do cliente; não afirmar causa exclusiva. Adaptador configurava 45s e função 60s.
+
+Correção preparada: Prompt Lab com prazo explícito de 90s e função de 120s; cancelamento real com AbortSignal; SDK com uma tentativa para não repetir geração automaticamente. Demais operações preservam prazo de 45s. Histórico enviado ao modelo limitado aos últimos três exemplos de até1200 caracteres; histórico completo preservado na validação de duplicidade. Thinking LOW para modelos Gemini 3 com versão decimal e instruções de concisão. Não limitar tokens de saída artificialmente, pois incluem raciocínio e podem truncar JSON. Estágio parse_response registrado separadamente.
+
+Validação: npm run lint aprovado; npm test 23/23; npm run build aprovado (aviso existente de bundle >500kB). Novos testes usam SDK real contra servidor HTTP local, verificam serialização LOW, timeout customizado/cancelamento e ausência de retry em 503. Testes existentes cobrem devolução única e saldo restaurado na falha da rota. Não houve chamada real ao Gemini, push ou deploy nesta rodada. Production permanece ffb52984fcfaa47ccc5747e34bfd9b888b464756 / dpl_DkMkxKCkkmvcXPRBeG9pUj7GTcF2. Próximo destino proposto: Preview; requer nova aprovação conforme AGENTS.md.
+
+Referências técnicas consultadas: https://ai.google.dev/gemini-api/docs/thinking e https://vercel.com/docs/functions/configuring-functions/duration. O ajuste reduz contexto e oferece mais tempo, mas não garante disponibilidade do provedor.
+
+## Autorização do Preview da correção de timeout
+
+Usuário respondeu sim à apresentação dos ajustes e dos 23 testes aprovados. Autorizado commit/push e publicação em Preview desta rodada. Production não está autorizada para esta correção. Destino: projeto jairobahia, equipe team_5xG6jBTCfWVXdl1NshYbJd9d, branch codex/fix-generation-credits.

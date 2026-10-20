@@ -3,9 +3,14 @@ import type { GoogleGenAI, GenerateContentParameters } from '@google/genai';
 // Keep one typed adapter for every route. GenerateContent accepts SDK contents,
 // including inlineData; Interactions v1 uses a different wire format.
 export async function createGeminiInteraction(ai: Pick<GoogleGenAI, 'models'>, params: GenerateContentParameters) {
+  const timeout = params.config?.httpOptions?.timeout ?? 45_000;
   return ai.models.generateContent({ ...params, config: {
     ...params.config,
-    httpOptions: { ...params.config?.httpOptions, timeout: 45_000 },
+    // Bound the whole request, including SDK behavior, and never silently repeat a paid generation.
+    abortSignal: params.config?.abortSignal
+      ? AbortSignal.any([params.config.abortSignal, AbortSignal.timeout(timeout)])
+      : AbortSignal.timeout(timeout),
+    httpOptions: { ...params.config?.httpOptions, timeout, retryOptions: { attempts: 1 } },
   }});
 }
 export function interactionText(response: any): string {
