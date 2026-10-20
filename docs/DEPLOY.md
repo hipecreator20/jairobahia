@@ -171,3 +171,9 @@ Validação final: npm test 20/20; npm run lint e npm run build aprovados. Aviso
 ## Autorização do Preview — 20/10/2026
 
 Proprietário respondeu “sim” ao envio desta rodada (diagnóstico administrativo e painel de créditos) para Preview. Autorizado commit e push da branch codex/fix-generation-credits para o Preview da Vercel. Não há autorização de merge ou promoção a Production. Validação local desta rodada: 20 testes, lint e build aprovados. Resultado remoto será registrado após publicação.
+
+## Envio de Preview pendente de autenticação — 20/10/2026
+
+Commit local preparado: 9694d180193b68f2b83e5f7b4ade2a264020d179. O push não foi concluído: Git Credential Manager não encontrou autenticação GitHub e a tentativa sem interação retornou Cannot prompt / could not read Username. Fluxo de login por dispositivo iniciado, sem código retornado, e cancelado para não deixar autenticação pendente. Plugin GitHub foi oferecido para instalação/conexão; ainda não conectado. A branch remota permanece d1724f7 e a Vercel não retornou deployment para 9694d18. Nenhum Preview novo confirmado; Production não alterada. Aguardar conexão GitHub do proprietário, então reenviar o commit já autorizado e validar o Preview. Aprovação para Production continua ausente.
+
+Acesso Git restabelecido em 20/10/2026 pelo fluxo oficial de dispositivo, conta hipecreator20 confirmada no navegador; autorização existente do Git Credential Manager renovada. Push/Preview desta rodada seguem autorizados; Production não autorizada. Retomar envio do código 9694d18 com estes registros documentais.
