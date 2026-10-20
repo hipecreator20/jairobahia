@@ -1,5 +1,16 @@
 # Fluxo de publicação e estado confirmado
 
+## Estado mais recente — continuação, áudio e créditos (20/10/2026)
+
+- Código publicado em Production pela Vercel após autorização expressa do proprietário: commit `b6bcab72b170a6b21050cac63ff356c0de012cc7`, deployment `dpl_7xptdmEtRn4knXkM6HjviDwQV8Y2`, READY, alias https://jairobahia.vercel.app . `/api/health` confirmou o SHA exato. `/`, `/login`, `/dashboard` e `/admin` responderam HTTP 200; `/api/billing` e `/api/gemini/analyze-audio` sem token responderam HTTP 401.
+- Branch `codex/story-continuity-reference`, commit de código acima. PR incremental #4: https://github.com/hipecreator20/jairobahia/pull/4 , base `codex/admin-content-polish` (PR #3), que segue empilhado sobre PR #1/main. PR #4 recebeu 4/4 checks verdes (validate, preview-smoke, Vercel deployment e feedback); não houve merge nem alteração de proteção. O PR #1 continua precisando de revisão independente para integração a `main`.
+- Entregue: prompts sequenciais com identidade fixa e enquadramento temporal; upload de imagem por arquivo; cue sheet musical estimada pelo Gemini, ajustável por milissegundo e anexada à exportação de cada clipe; carteira de moedas e histórico; cobrança atômica por geração e administração manual de pagamento/plano usando UID Master no servidor. Valores iniciais: Free 10 mil, Pro R$39,90/1 milhão e Premium R$79,90/3 milhões; texto 1 mil, imagem 10 mil e áudio 10 mil moedas; histórias descontam por cena. Admin pode configurar valores. São créditos internos; não existe processamento de pagamento.
+- Checks locais e CI: TypeScript, 14 testes e build passaram. Build reporta bundle JavaScript 1.055 kB (limite de aviso 500 kB). Nenhuma IA paga ou gravação de pagamento foi feita nos testes. A análise musical é uma estimativa, precisa ser revisada e não garante sincronização labial precisa.
+- Storage persistente segue desativado: projeto Firebase no Spark, sem upgrade Blaze, `MEDIA_UPLOADS_ENABLED` não habilitada; portanto não há cota efetiva de 20 GB nem retenção persistente de uploads. O componente de referência usa arquivo local de forma temporária; áudio é processado na sessão e não é gravado, somente sua cue sheet. Nenhuma regra Storage foi publicada. Cron protegido requer `CRON_SECRET` ainda não configurado. Não ativar cobrança/Storage sem confirmação específica de limite mensal do proprietário.
+- Testes ponta a ponta ainda pendentes: segunda conta Google aprovada/suspensa, atualização e renovação real de custom claims, ações reais do Admin e geração Gemini real sob teto de gastos. Confirmar antes de chamar isso de operação completa.
+
+Prompt de continuidade completo para o próximo agente: `docs/CONTINUACAO_JARINHO.md`.
+
 ## Rodada atual — conteúdo visual e controles (20/10/2026)
 
 Esta seção é o estado mais recente e prevalece sobre os relatos históricos abaixo.

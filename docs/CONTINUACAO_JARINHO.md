@@ -16,15 +16,13 @@ O projeto Firebase permanece no Spark. Não habilite upload persistente nem prom
 
 ## GitHub, Preview e produção
 
-Branch de trabalho `codex/story-continuity-reference`, derivada de `codex/admin-content-polish`; PR incremental deve apontar para a branch anterior (PR #3), cujo PR #1 segue destinado à `main`. Publicação desta rodada foi autorizada pelo proprietário. Registre aqui os SHA, PR, checks, Preview, deployment e SHA confirmado no `/api/health` após concluir. Não afirme publicação antes de verificar. Produção já estava no commit `bb58de790224b485f777d581adf83e492a5759aa` no início desta rodada; PRs seguem sujeitos à revisão independente/proteção normal.
+Branch de trabalho `codex/story-continuity-reference`, commit de código `b6bcab72b170a6b21050cac63ff356c0de012cc7`; PR #4 https://github.com/hipecreator20/jairobahia/pull/4 , base PR #3 (`codex/admin-content-polish`), que segue empilhado sobre PR #1/main. PR #4 teve 4/4 checks verdes. Produção foi publicada pela Vercel: deployment `dpl_7xptdmEtRn4knXkM6HjviDwQV8Y2`, READY, https://jairobahia.vercel.app; `/api/health` confirmou o SHA. Páginas principais 200; APIs billing/análise de áudio sem login 401. PRs continuam sujeitos à revisão independente/proteção normal.
 
 ## Próximas ações para concluir
 
-1. Revisar os endpoints e o estado desativado do Storage, rodar `npm run lint`, `npm test` e `npm run build`.
-2. Fazer commit e push nesta branch; abrir PR incremental contra `codex/admin-content-polish` e salvar os checks/Preview.
-3. Publicar somente a versão validada na Vercel conforme a autorização já dada; verificar alias oficial, `/api/health` com SHA exato, login e endpoints protegidos. Não mesclar nem alterar proteção de `main`.
-4. Atualizar `docs/DEPLOY.md` com resultados concretos e este prompt de continuação.
-5. Para Storage persistente: solicitar ao proprietário confirmação do upgrade Blaze e teto mensal; verificar bucket, configurar `CRON_SECRET` sem imprimi-lo, depois habilitar Storage e testar com conta controlada. Não executar agora.
-6. Próximas validações reais: segunda conta Google aprovada/suspensa, ações do Admin, sincronização de token/claims, geração Gemini com teto de gasto explícito, e exclusão de arquivo temporário/pago. Registrar o que não foi testado.
+1. Verificar o novo commit de documentação nesta branch e manter o relatório de implantação atualizado.
+2. Não mesclar PR #4/#3/#1 nem alterar a proteção de `main`; falta revisão independente do PR principal.
+3. Próximas validações reais: segunda conta Google aprovada/suspensa, ações do Admin, sincronização de token/claims, geração Gemini com teto de gasto explícito. Não registrar pagamentos/gerar conteúdo com IA real sem combinar teto.
+4. Para Storage persistente: pedir confirmação específica do upgrade Blaze e teto mensal; só depois verificar bucket, configurar `CRON_SECRET` sem imprimi-lo, habilitar flag e testar com conta controlada. Upload persistente e cota de 20 GB ainda não estão ativos.
 
 Antes de qualquer publicação futura, mostrar o que mudou, testes e destino, e pedir autorização do proprietário. A aprovação atual cobre apenas esta rodada.
