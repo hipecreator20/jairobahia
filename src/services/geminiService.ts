@@ -148,6 +148,10 @@ export interface GenerateStoryScriptParams {
   format?: string;
   tone?: string;
   characterNames?: string[];
+  characterIds?: string[];
+  clipDuration?: number;
+  platform?: string;
+  referenceImage?: string;
   sceneCount?: number;
   userEmail: string;
 }
@@ -197,6 +201,7 @@ export interface GenerateCharacterPromptParams {
   physicalTraits?: string;
   wardrobe?: string;
   personality?: string;
+  referenceImage?: string;
   userEmail: string;
 }
 
@@ -226,11 +231,14 @@ export async function generateCharacterMasterPromptWithGemini(
 }
 
 
-async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+export async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const user = auth.currentUser;
   if (!user) throw new Error('Entre com sua conta para continuar.');
   const headers = new Headers(init.headers);
+  if (init.method === 'POST' && String(input).includes('/api/gemini/')) headers.set('Idempotency-Key', headers.get('Idempotency-Key') || crypto.randomUUID());
   headers.set('Authorization', 'Bearer ' + await user.getIdToken());
   if (appCheck) headers.set('X-Firebase-AppCheck', (await getToken(appCheck)).token);
-  return fetch(input, { ...init, headers });
+  const response = await fetch(input, { ...init, headers });
+  if (response.headers.has('X-Coins-Spent')) window.dispatchEvent(new Event('wallet-changed'));
+  return response;
 }
