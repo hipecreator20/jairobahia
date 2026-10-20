@@ -947,6 +947,10 @@ export const ImageLab: React.FC = () => {
             </div>
           </div>
 
+          <article className="grid overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#111] md:grid-cols-[1.35fr_1fr]">
+            <img src="/assets/images/studio-cinema-editorial.png" alt="Câmera de cinema em um estúdio de criação iluminado" className="h-52 w-full object-cover md:h-64" loading="lazy" />
+            <div className="flex flex-col justify-center p-5 md:p-7"><span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#DFFF00]">Inspiração visual · imagem de exemplo</span><h2 className="mt-2 text-lg font-bold text-white">Toda criação começa por uma direção.</h2><p className="mt-2 max-w-md text-xs leading-relaxed text-zinc-400">Veja a referência e descreva sua própria cena. As imagens que você gera aparecem na sua galeria quando salvas.</p></div>
+          </article>
           {/* Grid of Saved Images */}
           {loadingGallery ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
