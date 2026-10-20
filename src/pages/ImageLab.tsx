@@ -98,6 +98,7 @@ export const ImageLab: React.FC = () => {
   const [projectFilter, setProjectFilter] = useState('all');
   const [lightboxImage, setLightboxImage] = useState<ImageAsset | null>(null);
   const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+  const [galleryMessage, setGalleryMessage] = useState('');
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
   // Load Firestore assets
@@ -284,15 +285,19 @@ export const ImageLab: React.FC = () => {
   };
 
   const handleDeleteGalleryImage = async (image: ImageAsset) => {
+    if (deletingImageId) return;
     if (!confirm(`Deseja remover "${image.title || 'esta imagem'}" da galeria?`)) return;
     setDeletingImageId(image.id);
+    setGalleryMessage('Excluindo imagem…');
     try {
       await deleteImageAsset(image.id, image.storagePath);
+      setGalleryMessage('Imagem removida da galeria.');
       if (lightboxImage?.id === image.id) {
         setLightboxImage(null);
       }
     } catch (err) {
       console.error('Erro ao deletar imagem:', err);
+      setGalleryMessage('Não foi possível excluir a imagem. Confira sua conexão e tente novamente.');
     } finally {
       setDeletingImageId(null);
     }
@@ -902,6 +907,7 @@ export const ImageLab: React.FC = () => {
       {/* ================================================================== */}
       {/* ABA 3: GALERIA DO ESTÚDIO                                          */}
       {/* ================================================================== */}
+      {galleryMessage && <p role="status" className="rounded-xl border border-zinc-700 p-3 text-sm text-zinc-200">{galleryMessage}</p>}
       {activeTab === 'galeria' && (
         <div className="space-y-5">
           {/* Filter Bar */}
@@ -1020,7 +1026,7 @@ export const ImageLab: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteGalleryImage(img)}
-                          disabled={deletingImageId === img.id}
+                          disabled={Boolean(deletingImageId)}
                           className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
                           title="Excluir imagem"
                         >

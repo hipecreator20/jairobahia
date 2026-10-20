@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import React, { useEffect, useRef, useState } from 'react';
+import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { MASTER_UID, useAuth } from '../context/AuthContext';
 import { UserProfile } from '../types';
@@ -25,15 +25,26 @@ export const Admin: React.FC = () => {
   const [message, setMessage] = useState('');
   const [busyUser, setBusyUser] = useState<string | null>(null);
   const [actionError, setActionError] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const actionPending = useRef(false);
+  const plansDirty = useRef(false);
+
+  const runAction = async (key: string, action: () => Promise<void>, success: string) => {
+    if (actionPending.current) return;
+    actionPending.current = true; setBusyAction(key); setActionError(false); setMessage('Salvando no servidor…');
+    try { await action(); setMessage(success); }
+    catch (error) { setActionError(true); setMessage(error instanceof Error ? error.message : 'Não foi possível concluir. Tente novamente.'); }
+    finally { actionPending.current = false; setBusyAction(null); }
+  };
 
   useEffect(() => {
     if (!isOwner) return;
     const stops = [
       onSnapshot(collection(db, 'users'), snap => setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id }) as UserProfile)), () => { setActionError(true); setMessage('Não foi possível carregar os usuários. Confira sua sessão Master.'); }),
-      onSnapshot(collection(db, 'accessLogs'), snap => setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }) as Record<string, any>).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)))), e => console.error('[Admin access logs]', e)),
-      onSnapshot(collection(db, 'usage'), snap => setUsage(snap.docs.map(d => ({ id:d.id, ...d.data() }) as Record<string, any>)), e => console.error('[Admin usage]', e)),
-      onSnapshot(collection(db, 'alerts'), snap => setAlerts(snap.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.error('[Admin alerts]', e)),
-      onSnapshot(doc(db, 'settings', 'plans'), snap => { if (snap.exists() && snap.data().plans) setPlans(snap.data().plans); }, e => console.error('[Admin plans]', e)),
+      onSnapshot(collection(db, 'accessLogs'), snap => setLogs(snap.docs.map(d => ({ ...d.data(), id: d.id }) as Record<string, any>).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)))), e => console.error('[Admin access logs]', e)),
+      onSnapshot(collection(db, 'usage'), snap => setUsage(snap.docs.map(d => ({ ...d.data(), id:d.id }) as Record<string, any>)), e => console.error('[Admin usage]', e)),
+      onSnapshot(collection(db, 'alerts'), snap => setAlerts(snap.docs.map(d => ({ ...d.data(), id: d.id }))), e => console.error('[Admin alerts]', e)),
+      onSnapshot(doc(db, 'settings', 'plans'), snap => { if (!plansDirty.current && snap.exists() && snap.data().plans) setPlans({ ...defaults, ...snap.data().plans }); }, () => { setActionError(true); setMessage('Não foi possível carregar os planos.'); }),
     ];
     return () => stops.forEach(stop => stop());
   }, [isOwner]);
@@ -53,14 +64,16 @@ export const Admin: React.FC = () => {
     finally { setBusyUser(null); }
   };
   const savePlans = async () => {
-    if (Object.values(plans).some(plan => !Number.isFinite(plan.price) || plan.price < 0 || !Number.isSafeInteger(plan.promptsPerMonth) || plan.promptsPerMonth < 1)) { setMessage('Confira os preços e limites informados.'); return; }
-    try { await setDoc(doc(db, 'settings', 'plans'), { plans, updatedAt: new Date().toISOString() }); setMessage('Planos salvos. Pagamentos continuam desativados.'); }
-    catch (error) { console.error('[Admin plans]', error); setMessage('Falha ao salvar os planos.'); }
+    if (Object.values(plans).some(plan => !Number.isFinite(plan.price) || plan.price < 0 || !Number.isSafeInteger(plan.promptsPerMonth) || plan.promptsPerMonth < 1)) { setActionError(true); setMessage('Confira os preços e limites informados.'); return; }
+    await runAction('plans', async () => { await setDoc(doc(db, 'settings', 'plans'), { plans, updatedAt: new Date().toISOString() }); plansDirty.current = false; }, 'Planos salvos. Pagamentos continuam desativados.');
   };
   const createAlert = async () => {
     if (!alertText.trim()) return;
-    try { await setDoc(doc(collection(db, 'alerts')), { message: alertText.trim().slice(0, 300), createdAt: new Date().toISOString(), createdBy: 'master', active: true }); setAlertText(''); }
-    catch (error) { console.error('[Admin alert]', error); setMessage('Falha ao publicar o alerta.'); }
+    await runAction('alert', async () => { await setDoc(doc(collection(db, 'alerts')), { message: alertText.trim().slice(0, 300), createdAt: new Date().toISOString(), createdBy: MASTER_UID, active: true }); setAlertText(''); }, 'Alerta publicado.');
+  };
+  const removeAlert = async (id: string) => {
+    if (!window.confirm('Excluir este alerta? Esta ação não pode ser desfeita.')) return;
+    await runAction(`delete:${id}`, () => deleteDoc(doc(db, 'alerts', id)), 'Alerta excluído.');
   };
 
   const button = (key: typeof tab, label: string) => <button onClick={() => setTab(key)} className={`rounded-lg px-3 py-2 text-sm ${tab === key ? 'bg-lime-300 text-black' : 'bg-zinc-800 text-white'}`}>{label}</button>;
@@ -86,8 +99,8 @@ export const Admin: React.FC = () => {
       {!users.length && <p className="rounded-xl border border-zinc-800 p-6 text-sm text-zinc-400">Nenhum usuário carregado.</p>}
     </div>}
     {tab === 'access' && <div className="space-y-2"><h2 className="font-semibold">Uso mensal</h2>{usage.map(row=><article key={row.id} className="rounded-lg border border-zinc-800 p-3 text-sm">{row.uid} · {row.month} · {row.count} prompts · {row.plan}</article>)}<h2 className="pt-3 font-semibold">Eventos</h2>{logs.map((log,i)=><article key={log.id || i} className="rounded-lg border border-zinc-800 p-3 text-sm"><strong>{log.event}</strong><span className="ml-2 text-zinc-400">{log.email || log.uid} · {log.createdAt}</span></article>)}{!logs.length && <p className="text-sm text-zinc-400">Nenhum evento registrado.</p>}</div>}
-    {tab === 'alerts' && <div className="space-y-3"><div className="flex gap-2"><input value={alertText} onChange={e=>setAlertText(e.target.value)} maxLength={300} placeholder="Novo alerta" className="min-w-0 flex-1 rounded-lg bg-zinc-900 px-3 py-2"/><button onClick={()=>void createAlert()} className="rounded-lg bg-lime-300 px-4 text-black">Publicar</button></div>{alerts.map(a=><article key={a.id} className="rounded-lg border border-zinc-800 p-3">{a.message}<div className="text-xs text-zinc-500">{a.createdAt}</div></article>)}</div>}
-    {tab === 'plans' && <div className="space-y-3">{Object.entries(plans).map(([key,plan])=><article key={key} className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-3"><strong className="capitalize">{key}</strong><label className="text-xs text-zinc-400">Preço mensal (R$)<input type="number" min="0" step="0.01" value={plan.price} onChange={e=>setPlans(v=>({...v,[key]:{...v[key],price:Number(e.target.value)}}))} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label><label className="text-xs text-zinc-400">Prompts por mês<input type="number" min="0" value={plan.promptsPerMonth} onChange={e=>setPlans(v=>({...v,[key]:{...v[key],promptsPerMonth:Number(e.target.value)}}))} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label></article>)}<button onClick={()=>void savePlans()} className="rounded-lg bg-lime-300 px-4 py-2 font-semibold text-black">Salvar planos</button><p className="text-xs text-zinc-500">A cobrança está desativada. Os limites de uso são verificados na API.</p></div>}
+    {tab === 'alerts' && <div className="space-y-3"><div className="flex gap-2"><input disabled={Boolean(busyAction)} aria-label="Mensagem do alerta" value={alertText} onChange={e=>setAlertText(e.target.value)} maxLength={300} placeholder="Novo alerta" className="min-w-0 flex-1 rounded-lg bg-zinc-900 px-3 py-2"/><button disabled={Boolean(busyAction) || !alertText.trim()} onClick={()=>void createAlert()} className="rounded-lg bg-lime-300 px-4 text-black">{busyAction === 'alert' ? 'Publicando…' : 'Publicar'}</button></div>{alerts.map(a=><article key={a.id} className="rounded-lg border border-zinc-800 p-3">{a.message}<div className="text-xs text-zinc-500">{a.createdAt}</div><button type="button" disabled={Boolean(busyAction)} onClick={()=>void removeAlert(a.id)} className="mt-3 rounded-lg border border-red-900 px-3 py-2 text-xs text-red-300 disabled:opacity-40">{busyAction === `delete:${a.id}` ? 'Excluindo…' : 'Excluir alerta'}</button></article>)}</div>}
+    {tab === 'plans' && <div className="space-y-3">{Object.entries(plans).map(([key,plan])=><article key={key} className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-3"><strong className="capitalize">{key}</strong><label className="text-xs text-zinc-400">Preço mensal (R$)<input type="number" min="0" step="0.01" value={plan.price} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],price:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label><label className="text-xs text-zinc-400">Prompts por mês<input type="number" min="0" value={plan.promptsPerMonth} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],promptsPerMonth:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label></article>)}<button disabled={Boolean(busyAction)} onClick={()=>void savePlans()} className="rounded-lg bg-lime-300 px-4 py-2 font-semibold text-black">{busyAction === 'plans' ? 'Salvando…' : 'Salvar planos'}</button><p className="text-xs text-zinc-500">A cobrança está desativada. Os limites de uso são verificados na API.</p></div>}
     {tab === 'settings' && <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300">Projeto Firebase: gen-lang-client-0704234685<br/>Banco: ai-studio-23b8da44-a156-4670-8dcd-03a6cf972fab<br/>Pagamentos: desativados<br/>Eventos e alterações são registrados no Firestore.</div>}
   </section>;
 };

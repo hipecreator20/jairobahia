@@ -29,7 +29,7 @@ export function subscribeImageAssets(
     (snapshot) => {
       const list: ImageAsset[] = [];
       snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as ImageAsset);
+        list.push({ ...docSnap.data(), id: docSnap.id } as ImageAsset);
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       onUpdate(list);
@@ -104,7 +104,8 @@ export async function deleteImageAsset(assetId: string, storagePath?: string): P
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
     } catch (storageErr) {
-      console.warn('[HYPE STORAGE] Aviso ao excluir objeto do Storage:', storageErr);
+      // Preserve the gallery entry for retry when Storage denies or fails deletion.
+      if ((storageErr as { code?: string }).code !== 'storage/object-not-found') throw storageErr;
     }
   }
 

@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
 import { Story, Scene, Character } from '../types';
 import {
   subscribeStories,
@@ -66,6 +67,7 @@ const TONES = [
 
 export const StoryStudio: React.FC = () => {
   const { user } = useAuth();
+  const { deleting, deleteMessage, removeItem } = useDeleteFeedback();
   const [activeTab, setActiveTab] = useState<'historias' | 'criar'>('historias');
 
   // Selected Story for Editing/Viewing
@@ -188,15 +190,12 @@ export const StoryStudio: React.FC = () => {
   };
 
   const handleDeleteStory = async (storyId: string) => {
-    if (!confirm('Deseja excluir esta história e todas as suas cenas?')) return;
-    try {
+    await removeItem('história e todas as suas cenas', async () => {
       await deleteStory(storyId);
       if (selectedStory?.id === storyId) {
         setSelectedStory(null);
       }
-    } catch {
-      alert('Falha ao excluir história.');
-    }
+    });
   };
 
   const handleCreateManualScene = async () => {
@@ -231,17 +230,14 @@ export const StoryStudio: React.FC = () => {
   };
 
   const handleDeleteSceneItem = async (sceneId: string) => {
-    if (!confirm('Deseja excluir esta cena?')) return;
     if (!selectedStory || !user) return;
-    try {
+    await removeItem('cena', async () => {
       await deleteScene(sceneId);
       await updateStory(selectedStory.id, {
         ownerId: user.uid,
         sceneCount: Math.max(0, scenes.length - 1),
       });
-    } catch {
-      alert('Falha ao excluir cena.');
-    }
+    });
   };
 
   const handleExportScreenplay = () => {
@@ -287,6 +283,7 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
 
   return (
     <div className="space-y-6 pb-12 max-w-6xl">
+      {deleteMessage && <p role="status" className="rounded-xl border border-zinc-700 p-3 text-sm text-zinc-200">{deleteMessage}</p>}
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -358,7 +355,7 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
                 <span>Exportar Roteiro (.txt)</span>
               </button>
               <button
-                onClick={() => handleDeleteStory(selectedStory.id)}
+                disabled={deleting} onClick={() => handleDeleteStory(selectedStory.id)}
                 className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-[#201010] transition-colors cursor-pointer"
                 title="Excluir história"
               >
@@ -614,7 +611,7 @@ ${scene.prompt || 'Sem prompt cadastrado.'}
                               </button>
                             )}
                             <button
-                              onClick={() => handleDeleteSceneItem(scene.id)}
+                              disabled={deleting} onClick={() => handleDeleteSceneItem(scene.id)}
                               className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-[#201010] transition-colors cursor-pointer"
                               title="Excluir cena"
                             >

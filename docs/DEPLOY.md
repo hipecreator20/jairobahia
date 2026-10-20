@@ -1,5 +1,17 @@
 # Fluxo de publicação e estado confirmado
 
+## Rodada atual — conteúdo visual e controles (20/10/2026)
+
+Esta seção é o estado mais recente e prevalece sobre os relatos históricos abaixo.
+
+- Produção foi publicada diretamente pela Vercel com autorização explícita do proprietário, a partir do commit já enviado `6f6f0d1cfe6f5e076f11423406659caeff9f6ed5`. Deployment `dpl_CqBMbdMnbp4ZrNHekB1vdvuTov2j`, estado READY, domínio https://jairobahia.vercel.app. Saúde HTTP 200 com SHA exato; /, /login, /dashboard e /admin HTTP 200. Isso não confirma fluxos autenticados. PR #1 segue aberto e sem merge; proteções GitHub não foram alteradas. Main ainda precisa ser alinhada à produção por revisão/merge.
+- Nova branch local `codex/admin-content-polish`, baseada em `origin/codex/automatic-deploy-pipeline` no commit acima. Três referências visuais no Dashboard reutilizam imagens existentes, com briefings expansíveis e cópia com feedback. Nenhum exemplo é gravado nas coleções do usuário.
+- Leituras de projetos, personagens, histórias, cenas, imagens e prompts usam o ID real do documento para edição/exclusão. Histórias só são apagadas depois da limpeza das cenas, consultadas por ownerId e storyId. Se parte da limpeza falhar, a história permanece para nova tentativa; a exclusão não é atômica e cenas já removidas não são restauradas. Falhas no Storage preservam o registro da imagem, exceto objeto já ausente.
+- Admin: trava contra envio repetido de planos/alertas, feedback de sucesso/erro, exclusão de alertas com confirmação e preservação de alterações de planos ainda não salvas. Preferências exibem falhas e recusam sucesso falso para perfil inexistente. Prompt Lab e Story Studio usam feedback compartilhado e bloqueio durante exclusão.
+- Validação: TypeScript, build e 7 testes locais passaram; novo teste com Firestore simulado verifica ID real, consulta por dono, ordem de exclusão e preservação da história em falha. O primeiro teste no sandbox encontrou EPERM; a execução autorizada fora dessa restrição passou. Build mantém aviso existente de bundle acima de 500 kB. Nenhuma chamada paga ou operação sobre dados reais.
+- Não houve teste real de todos os botões em sessão autenticada. Pendentes: inspeção visual autenticada, salvar/excluir registros controlados, segunda conta Google, IA real/cotas, Storage Blaze/regras e App Check.
+- Esta nova rodada está preparada localmente. Push gera Preview automático e exige nova autorização depois da apresentação dos resultados, conforme AGENTS.md; não reutilizar a aprovação da publicação anterior. Production continua no commit acima até uma nova publicação explicitamente aprovada.
+
 ## Regra do proprietário — aprovação antes de cada deploy
 
 ### Rodada autorizada por voz — acesso, Admin e prompts
