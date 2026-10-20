@@ -32,7 +32,6 @@ import {
   subscribeImageAssets,
   saveImageAsset,
   deleteImageAsset,
-  seedInitialImageAssetsIfEmpty,
 } from '../firebase/services/imageService';
 import { subscribeProjects } from '../firebase/services/projectService';
 
@@ -104,8 +103,6 @@ export const ImageLab: React.FC = () => {
   // Load Firestore assets
   useEffect(() => {
     if (!user) return;
-
-    seedInitialImageAssetsIfEmpty(user.uid);
 
     const unsubImages = subscribeImageAssets(
       user.uid,

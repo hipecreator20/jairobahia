@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -20,12 +21,10 @@ import { useAuth } from '../context/AuthContext';
 import { Project, Character } from '../types';
 import {
   subscribeProjects,
-  seedInitialProjectsIfEmpty,
   deleteProject,
 } from '../firebase/services/projectService';
 import {
   subscribeCharacters,
-  seedInitialCharactersIfEmpty,
 } from '../firebase/services/characterService';
 import { ProjectModal } from '../components/common/ProjectModal';
 import { CharacterModal } from '../components/common/CharacterModal';
@@ -42,6 +41,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setIsNewProjectModalOpen,
 }) => {
   const { user } = useAuth();
+  const { deleting, deleteMessage, removeItem } = useDeleteFeedback();
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -58,9 +58,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     if (!user) return;
 
-    // Seed initial demo data if empty for first time setup
-    seedInitialProjectsIfEmpty(user.uid);
-    seedInitialCharactersIfEmpty(user.uid);
+    // Empty accounts stay empty; deleted examples are not recreated.
 
     // Subscribe to projects in real-time
     const unsubProjects = subscribeProjects(
@@ -113,6 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
+      {deleteMessage && <p role="status" aria-live="polite" className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-200">{deleteMessage}</p>}
       {/* ------------------------------------------------------------------ */}
       {/* 1. HERO BANNER — Cinematic welcome matching user mockup            */}
       {/* ------------------------------------------------------------------ */}
@@ -415,12 +414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <span>Editar Projeto</span>
                         </button>
                         <button
-                          onClick={async () => {
-                            if (confirm(`Excluir o projeto "${project.title}"?`)) {
-                              await deleteProject(project.id);
-                            }
-                            setActiveMenuProjectId(null);
-                          }}
+                          disabled={deleting} onClick={() => { void removeItem(project.title, () => deleteProject(project.id)); setActiveMenuProjectId(null); }}
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-left transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

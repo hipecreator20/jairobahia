@@ -1,5 +1,22 @@
 # Fluxo de publicação e estado confirmado
 
+## Regra do proprietário — aprovação antes de cada deploy
+
+### Rodada autorizada por voz — acesso, Admin e prompts
+
+O proprietário relatou que a segunda conta não conseguia usar recursos, faltava confirmação no Admin, exclusões não funcionavam e queria prompts Gemini com diversidade. Autorizou o push desta rodada e o Preview automático. Depois solicitou atualizar o domínio oficial; a publicação em Production será apresentada com os resultados finais para autorização específica, conforme a regra abaixo.
+
+- Removidos cinco bloqueios antigos por e-mail do proprietário nos endpoints de IA. A autorização existente por token verificado, UID Master ou perfil aprovado e cotas permanece no middleware; chaves de concorrência de imagem agora usam o UID verificado no servidor.
+- Admin mantém a estrutura do estúdio, com cartões, status/plano destacados, estado salvando, bloqueio de ações simultâneas, erro/sucesso visível e proteção da conta Master. IDs vêm dos documentos, não de um campo editável de perfil.
+- Removida a criação automática de demonstrações ao abrir Dashboard, Image Lab e Prompt Lab. Listas vazias permanecem vazias; exemplos excluídos não são recriados. Nenhum dado existente foi apagado. Dashboard/Biblioteca agora mostram confirmação/erro de exclusão. Não afirmar que todas as exclusões reais foram testadas.
+- Prompt Lab continua usando o SDK oficial Google GenAI, sem exigir plugin novo. Instrução de sistema separada, esquema JSON e validação de conteúdo; direção visual focada no pedido, sem fórmulas obrigatórias de pele/grão/anamórfica nem versões fixas de plataforma. O histórico recente de até 12 prompts da própria conta orienta diversidade. Backend bloqueia cópias normalizadas e semelhança lexical >=85% nesse histórico, e mantém fingerprints exatos desde a ativação. Gravações transacionais evitam aprovar cópias simultâneas. Não garante originalidade semântica mundial nem qualidade superior ao mercado. Prompts anteriores à ativação não são indexados retroativamente. Não há retry pago automático; uma resposta rejeitada pode ter consumido chamada/cota.
+- Histórico/fingerprints ficam em novas coleções privadas, negadas ao cliente pelas regras atuais e acessadas pelo Admin SDK; não foi preciso publicar regras ou migrar dados. O histórico recente completo é limitado a 12 respostas; fingerprints exatos persistem por conta.
+- Verificação local: TypeScript e **6 testes passaram**, incluindo integração de cinco rotas com segunda conta simulada, conta pending e cota esgotada, além de validação/repetição de prompts. Firebase inteiramente simulado nesse teste, chave local descartável, sem credenciais reais ou chamadas de IA. A suíte de 15 verificações de regras já passou antes desta rodada; regras não foram modificadas.
+
+Pendentes nesta rodada: build/CI/Preview do novo commit, inspeção visual autenticada do Admin, segunda conta Google real, exclusões reais controladas e avaliação de uma geração Gemini real com custo combinado. A implementação de qualidade não equivale a uma avaliação humana dos resultados.
+
+Em 20/10/2026, o proprietário determinou: antes de cada publicação, apresentar o que mudou e os resultados dos testes, identificar o destino e perguntar se pode publicar. A regra inclui Preview automático disparado por push; portanto novos pushes que acionem a integração aguardam autorização específica. Preparação, testes e commits locais podem continuar. A aprovação anterior não autoriza novas publicações. Regra permanente também em AGENTS.md. Não desativar integração nem proteções para contorná-la.
+
 ## Continuação — correção de plano Admin (20/10/2026)
 
 Continuação por voz: corrigida a ordem de aprovação para publicar status approved no perfil somente após atualizar custom claims. Negação/suspensão continua bloqueando pelo perfil antes de alterar claims/revogar sessões. O cliente força renovação do ID token ao observar aprovação, inclusive no primeiro snapshot aprovado; em falha orienta novo login. TypeScript e os três testes locais passaram novamente. A suíte atual não simula o fluxo Google/claims ponta a ponta; essa validação com segunda conta permanece pendente. Alteração enviada à mesma branch do PR #2, sem publicação em produção; o CI citado abaixo valida o commit anterior, não este ajuste novo.

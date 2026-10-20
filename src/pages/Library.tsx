@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDeleteFeedback } from '../hooks/useDeleteFeedback';
 import {
   FolderArchive,
   Folder,
@@ -27,6 +28,7 @@ interface LibraryProps {
 
 export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
   const { user } = useAuth();
+  const { deleting, deleteMessage, removeItem } = useDeleteFeedback();
   const [activeTab, setActiveTab] = useState<'projetos' | 'personagens' | 'historias' | 'prompts'>('projetos');
   const [projects, setProjects] = useState<Project[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -60,6 +62,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
 
   return (
     <div className="space-y-6 pb-12 max-w-6xl">
+      {deleteMessage && <p role="status" aria-live="polite" className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-200">{deleteMessage}</p>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
@@ -174,11 +177,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
                   <span>Editar</span>
                 </button>
                 <button
-                  onClick={async () => {
-                    if (confirm(`Excluir ${p.title}?`)) {
-                      await deleteProject(p.id);
-                    }
-                  }}
+                  disabled={deleting} aria-label="Excluir" onClick={() => void removeItem(p.title, () => deleteProject(p.id))}
                   className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -224,11 +223,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
                   <span>Editar</span>
                 </button>
                 <button
-                  onClick={async () => {
-                    if (confirm(`Excluir personagem ${c.name}?`)) {
-                      await deleteCharacter(c.id);
-                    }
-                  }}
+                  disabled={deleting} aria-label="Excluir" onClick={() => void removeItem(c.name, () => deleteCharacter(c.id))}
                   className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -272,11 +267,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
                     {new Date(s.createdAt).toLocaleDateString('pt-BR')}
                   </span>
                   <button
-                    onClick={async () => {
-                      if (confirm(`Excluir história "${s.title}"?`)) {
-                        await deleteStory(s.id);
-                      }
-                    }}
+                    disabled={deleting} aria-label="Excluir" onClick={() => void removeItem(s.title, () => deleteStory(s.id))}
                     className="p-1 rounded text-zinc-500 hover:text-red-400"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -330,11 +321,7 @@ export const Library: React.FC<LibraryProps> = ({ onOpenNewProject }) => {
                       )}
                     </button>
                     <button
-                      onClick={async () => {
-                        if (confirm('Deseja excluir este prompt?')) {
-                          await deletePromptVersion(pr.id);
-                        }
-                      }}
+                      disabled={deleting} aria-label="Excluir" onClick={() => void removeItem(pr.title, () => deletePromptVersion(pr.id))}
                       className="p-1 rounded text-zinc-500 hover:text-red-400"
                     >
                       <Trash2 className="w-4 h-4" />
