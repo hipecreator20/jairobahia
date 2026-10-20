@@ -240,5 +240,9 @@ export async function authenticatedFetch(input: RequestInfo | URL, init: Request
   if (appCheck) headers.set('X-Firebase-AppCheck', (await getToken(appCheck)).token);
   const response = await fetch(input, { ...init, headers });
   if (response.headers.has('X-Coins-Spent')) window.dispatchEvent(new Event('wallet-changed'));
+  // Hosting failures may be plain text/HTML. Never expose a JSON parser error.
+  if (!response.headers.get('Content-Type')?.includes('application/json')) {
+    return new Response(JSON.stringify({success:false,message:'O servidor não concluiu a solicitação. Atualize o saldo em dois minutos; reservas de gerações interrompidas são estornadas automaticamente.'}), {status:response.ok?502:response.status,headers:{'Content-Type':'application/json'}});
+  }
   return response;
 }

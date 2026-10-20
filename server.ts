@@ -1,5 +1,5 @@
 import { installAudioRoutes } from './audio-api.js';
-import { debitGeneration, installBillingRoutes } from "./wallet.js";
+import { debitGeneration, settleGeneration, installBillingRoutes } from "./wallet.js";
 import { installMediaRoutes } from './media-storage.js';
 import { getStorage } from 'firebase-admin/storage';
 import { CREATIVE_INTENT, withCreativeIntent, storySchema, validateStoryResult } from "./story-continuity.js";
@@ -119,7 +119,18 @@ app.use('/api', async (req, res, next) => {
       try {
         const receipt = await debitGeneration(store,token.uid,req.path,req.body,req.header('Idempotency-Key'));
         res.set('X-Coins-Spent',String(receipt.cost)); res.set('X-Coins-Remaining',String(receipt.balance));
-        res.once('finish',()=>{void receipt.ledgerRef.set({status:res.statusCode<400?'completed':'failed',httpStatus:res.statusCode},{merge:true}).catch(()=>console.error('[HYPE BILLING] Falha ao registrar resultado.'));});
+        const sendJson=res.json.bind(res);
+        res.json=((body:unknown)=>{
+          const success=res.statusCode<400;
+          void settleGeneration(store,receipt.accountRef,receipt.ledgerRef,success).then(()=>{
+            if(!success) res.set('X-Coins-Spent','0');
+            sendJson(body);
+          }).catch(()=>{
+            console.error('[HYPE BILLING] Falha na liquidação; reserva será reconciliada.');
+            res.status(503);sendJson({success:false,message:'Não foi possível confirmar a geração. Consulte o saldo em dois minutos antes de tentar novamente.'});
+          });
+          return res;
+        }) as typeof res.json;
       } catch(error) {
         const code=error instanceof Error?error.message:'';
         if(code==='COIN_LIMIT') return res.status(429).json({success:false,message:'Saldo de moedas insuficiente para esta geração.'});

@@ -18,8 +18,8 @@ import {
   deleteCharacter,
 } from '../../firebase/services/characterService';
 import { useAuth } from '../../context/AuthContext';
-import { generateCharacterMasterPromptWithGemini, generateImageWithGemini } from '../../services/geminiService';
-import { ReferenceImageInput, ReferenceImage, readReferenceImage } from './ReferenceImageInput';
+import { generateCharacterMasterPromptWithGemini } from '../../services/geminiService';
+import { ReferenceImageInput, ReferenceImage } from './ReferenceImageInput';
 import { rememberReference, persistReference } from '../../services/mediaService';
 import { getWallet } from '../../services/billingService';
 
@@ -61,7 +61,6 @@ export const CharacterModal: React.FC<CharacterModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [reference, setReference] = useState<ReferenceImage | null>(null);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   useEffect(() => {
     if (characterToEdit) {
@@ -128,17 +127,6 @@ export const CharacterModal: React.FC<CharacterModalProps> = ({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleGenerateReference = async () => {
-    if (!user || !visualDna.trim() || isGeneratingImage) return;
-    setIsGeneratingImage(true); setErrorMessage(null);
-    try {
-      const result = await generateImageWithGemini({prompt:`Create a neutral reference portrait of this original fictional adult character. ${visualDna}`,aspectRatio:'1:1',userEmail:user.email || ''});
-      if (!result.imageUrl?.startsWith('data:image/')) throw Error('A geração não retornou uma imagem de referência.');
-      const blob = await (await fetch(result.imageUrl)).blob();
-      setReference(await readReferenceImage(new File([blob],'personagem-referencia.jpg',{type:blob.type})));
-    } catch(e) {setErrorMessage(e instanceof Error ? e.message : 'Falha ao gerar referência.');}
-    finally {setIsGeneratingImage(false);}
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,9 +288,8 @@ export const CharacterModal: React.FC<CharacterModalProps> = ({
             </div>
           </div>
 
-          <ReferenceImageInput binding={characterToEdit ? {kind:'characters',id:characterToEdit.id} : undefined} value={reference} onChange={setReference} disabled={isSubmitting || isGeneratingAiPrompt || isGeneratingImage} label="Upload para inspirar um personagem original" />
-          <button type="button" disabled={!visualDna.trim() || isGeneratingImage || isGeneratingAiPrompt} onClick={()=>void handleGenerateReference()} className="rounded-lg border border-lime-800 px-3 py-2 text-xs text-lime-200 disabled:opacity-40">{isGeneratingImage ? 'Gerando referência…' : 'Gerar primeira imagem com o DNA'} · consome moedas</button>
-          <p className="text-[10px] text-zinc-500">Edite o DNA, gere a primeira imagem e baixe-a para reutilizar como referência em todas as cenas. O upload de inspiração não identifica nem copia uma pessoa real.</p>
+          <ReferenceImageInput binding={characterToEdit ? {kind:'characters',id:characterToEdit.id} : undefined} value={reference} onChange={setReference} disabled={isSubmitting || isGeneratingAiPrompt} label="Upload para inspirar um personagem original" />
+          <p className="text-[10px] text-zinc-500">Edite o DNA e gere o prompt de texto. Envie uma imagem de referência para orientar o personagem e reutilize-a no Flow junto com os prompts de cada cena.</p>
           {/* Physical traits & Wardrobe */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

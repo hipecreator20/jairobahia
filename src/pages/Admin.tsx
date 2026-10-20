@@ -1,3 +1,4 @@
+import { normalizedCosts, normalizedAllowance } from '../../credit-pricing';
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -8,15 +9,15 @@ import { AdminSubscriptions } from '../components/common/AdminSubscriptions';
 
 type Plan = { name: string; price: number; promptsPerMonth: number; coinsPerMonth:number };
 const defaults: Record<string, Plan> = {
-  free: { name: 'Free', price: 0, promptsPerMonth: 10, coinsPerMonth:10000 },
-  pro: { name: 'Pro', price: 39.9, promptsPerMonth: 300, coinsPerMonth:1000000 },
-  premium: { name: 'Premium', price: 79.9, promptsPerMonth: 1000, coinsPerMonth:3000000 },
+  free: { name: 'Free', price: 0, promptsPerMonth: 10, coinsPerMonth:10 },
+  pro: { name: 'Pro', price: 39.9, promptsPerMonth: 300, coinsPerMonth:1000 },
+  premium: { name: 'Premium', price: 79.9, promptsPerMonth: 1000, coinsPerMonth:3000 },
 };
 const labels = { pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado', suspended: 'Suspenso' } as const;
 
 export const Admin: React.FC = () => {
   const { isOwner } = useAuth();
-  const [tab, setTab] = useState<'users' | 'access' | 'alerts' | 'plans' | 'settings'>('users');
+  const [tab, setTab] = useState<'users' | 'access' | 'alerts' | 'plans' | 'billing' | 'settings'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [logs, setLogs] = useState<Record<string, any>[]>([]);
   const [usage, setUsage] = useState<Record<string, any>[]>([]);
@@ -29,7 +30,7 @@ export const Admin: React.FC = () => {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const actionPending = useRef(false);
   const plansDirty = useRef(false);
-  const [costs,setCosts]=useState({text:1000,image:10000,audio:10000});
+  const [costs,setCosts]=useState({text:1,image:10,audio:10});
 
   const runAction = async (key: string, action: () => Promise<void>, success: string) => {
     if (actionPending.current) return;
@@ -46,7 +47,7 @@ export const Admin: React.FC = () => {
       onSnapshot(collection(db, 'accessLogs'), snap => setLogs(snap.docs.map(d => ({ ...d.data(), id: d.id }) as Record<string, any>).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)))), e => console.error('[Admin access logs]', e)),
       onSnapshot(collection(db, 'usage'), snap => setUsage(snap.docs.map(d => ({ ...d.data(), id:d.id }) as Record<string, any>)), e => console.error('[Admin usage]', e)),
       onSnapshot(collection(db, 'alerts'), snap => setAlerts(snap.docs.map(d => ({ ...d.data(), id: d.id }))), e => console.error('[Admin alerts]', e)),
-      onSnapshot(doc(db, 'settings', 'plans'), snap => { if (!plansDirty.current && snap.exists()) {const data=snap.data();setPlans(Object.fromEntries(Object.keys(defaults).map(key=>[key,{...defaults[key],...data.plans?.[key]}])));if(data.costs)setCosts(v=>({...v,...data.costs}));} }, () => { setActionError(true); setMessage('Não foi possível carregar os planos.'); }),
+      onSnapshot(doc(db, 'settings', 'plans'), snap => { if (!plansDirty.current && snap.exists()) {const data=snap.data();setPlans(Object.fromEntries(Object.keys(defaults).map(key=>[key,{...defaults[key],...data.plans?.[key],coinsPerMonth:normalizedAllowance(data,key as "free"|"pro"|"premium") }])));setCosts(normalizedCosts(data));} }, () => { setActionError(true); setMessage('Não foi possível carregar os planos.'); }),
     ];
     return () => stops.forEach(stop => stop());
   }, [isOwner]);
@@ -67,7 +68,7 @@ export const Admin: React.FC = () => {
   };
   const savePlans = async () => {
     if (Object.values(plans).some(plan => !Number.isFinite(plan.price) || plan.price < 0 || !Number.isSafeInteger(plan.coinsPerMonth) || plan.coinsPerMonth < 1 || plan.coinsPerMonth>100000000) || Object.values(costs).some(cost=>!Number.isSafeInteger(cost)||cost<1||cost>1000000)) { setActionError(true); setMessage('Confira os preços, moedas e custos informados.'); return; }
-    await runAction('plans', async () => { await setDoc(doc(db, 'settings', 'plans'), { plans, costs, updatedAt: new Date().toISOString() }); plansDirty.current = false; window.dispatchEvent(new Event('wallet-changed')); }, 'Planos e custos salvos. Pagamentos são confirmados manualmente.');
+    await runAction('plans', async () => { await setDoc(doc(db, 'settings', 'plans'), { plans, costs, creditUnitVersion:2, updatedAt: new Date().toISOString() }); plansDirty.current = false; window.dispatchEvent(new Event('wallet-changed')); }, 'Planos e custos salvos. Pagamentos são confirmados manualmente.');
   };
   const createAlert = async () => {
     if (!alertText.trim()) return;
@@ -81,10 +82,12 @@ export const Admin: React.FC = () => {
   const button = (key: typeof tab, label: string) => <button onClick={() => setTab(key)} className={`rounded-lg px-3 py-2 text-sm ${tab === key ? 'bg-lime-300 text-black' : 'bg-zinc-800 text-white'}`}>{label}</button>;
   return <section className="space-y-5">
     <header><h1 className="text-2xl font-bold text-white">Administração</h1><p className="text-sm text-zinc-400">Usuários, acessos, alertas e planos do estúdio.</p></header>
-    <nav className="flex flex-wrap gap-2">{button('users','Usuários')}{button('access','Acessos')}{button('alerts','Alertas')}{button('plans','Planos')}{button('settings','Configurações')}</nav>
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Contas',users.length],['Aprovados',users.filter(u=>u.status==='approved').length],['Pendentes',users.filter(u=>u.status==='pending').length],['Suspensos',users.filter(u=>u.status==='suspended').length]].map(([label,value])=><div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"><p className="text-xs text-zinc-400">{label}</p><strong className="text-2xl text-lime-200">{value}</strong></div>)}</div>
+    <nav className="flex flex-wrap gap-2">{button('users','Usuários')}{button('access','Acessos')}{button('alerts','Alertas')}{button('plans','Planos e créditos')}{button('billing','Pagamentos')}{button('settings','Configurações')}</nav>
     {message && <p role={actionError ? 'alert' : 'status'} aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm ${actionError ? 'border-red-800 bg-red-950/40 text-red-200' : 'border-lime-900 bg-lime-950/30 text-lime-200'}`}>{message}</p>}
+    {tab === 'billing' && <AdminSubscriptions users={users} />}
     {tab === 'users' && <div className="space-y-3">
-      <AdminSubscriptions users={users} />
+
       <p className="text-xs text-zinc-400">{users.length} contas · O acesso é liberado somente após a confirmação do servidor.</p>
       {users.map(user => <article key={user.id} aria-busy={busyUser === user.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -103,7 +106,7 @@ export const Admin: React.FC = () => {
     </div>}
     {tab === 'access' && <div className="space-y-2"><h2 className="font-semibold">Uso mensal</h2>{usage.map(row=><article key={row.id} className="rounded-lg border border-zinc-800 p-3 text-sm">{row.uid} · {row.month} · {row.count} prompts · {row.plan}</article>)}<h2 className="pt-3 font-semibold">Eventos</h2>{logs.map((log,i)=><article key={log.id || i} className="rounded-lg border border-zinc-800 p-3 text-sm"><strong>{log.event}</strong><span className="ml-2 text-zinc-400">{log.email || log.uid} · {log.createdAt}</span></article>)}{!logs.length && <p className="text-sm text-zinc-400">Nenhum evento registrado.</p>}</div>}
     {tab === 'alerts' && <div className="space-y-3"><div className="flex gap-2"><input disabled={Boolean(busyAction)} aria-label="Mensagem do alerta" value={alertText} onChange={e=>setAlertText(e.target.value)} maxLength={300} placeholder="Novo alerta" className="min-w-0 flex-1 rounded-lg bg-zinc-900 px-3 py-2"/><button disabled={Boolean(busyAction) || !alertText.trim()} onClick={()=>void createAlert()} className="rounded-lg bg-lime-300 px-4 text-black">{busyAction === 'alert' ? 'Publicando…' : 'Publicar'}</button></div>{alerts.map(a=><article key={a.id} className="rounded-lg border border-zinc-800 p-3">{a.message}<div className="text-xs text-zinc-500">{a.createdAt}</div><button type="button" disabled={Boolean(busyAction)} onClick={()=>void removeAlert(a.id)} className="mt-3 rounded-lg border border-red-900 px-3 py-2 text-xs text-red-300 disabled:opacity-40">{busyAction === `delete:${a.id}` ? 'Excluindo…' : 'Excluir alerta'}</button></article>)}</div>}
-    {tab === 'plans' && <div className="space-y-3">{Object.entries(plans).map(([key,plan])=><article key={key} className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-3"><strong className="capitalize">{key}</strong><label className="text-xs text-zinc-400">Preço mensal (R$)<input type="number" min="0" step="0.01" value={plan.price} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],price:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label><label className="text-xs text-zinc-400">Moedas por ciclo<input type="number" min="0" value={plan.coinsPerMonth} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],coinsPerMonth:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label></article>)}<div className="grid gap-3 sm:grid-cols-3">{Object.entries(costs).map(([kind,cost])=><label key={kind} className="text-xs text-zinc-400">{kind === 'text' ? 'Moedas por texto/cena' : kind === 'image' ? 'Moedas por imagem' : 'Moedas por análise de áudio'}<input type="number" min={1} max={1000000} value={cost} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current=true;setCosts(current=>({...current,[kind]:Number(e.target.value)}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label>)}</div><button disabled={Boolean(busyAction)} onClick={()=>void savePlans()} className="rounded-lg bg-lime-300 px-4 py-2 font-semibold text-black">{busyAction === 'plans' ? 'Salvando…' : 'Salvar planos'}</button><p className="text-xs text-zinc-500">Pagamento manual no Admin. Texto, imagem, áudio e cada cena usam custos diferentes. Saldo debitado no servidor ao iniciar. Pro e Premium reservam 20 GB por conta quando o armazenamento estiver ativado.</p></div>}
-    {tab === 'settings' && <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300">Projeto Firebase: gen-lang-client-0704234685<br/>Banco: ai-studio-23b8da44-a156-4670-8dcd-03a6cf972fab<br/>Pagamentos: desativados<br/>Eventos e alterações são registrados no Firestore.</div>}
+    {tab === 'plans' && <div className="space-y-3">{Object.entries(plans).map(([key,plan])=><article key={key} className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-3"><strong className="capitalize">{key}</strong><label className="text-xs text-zinc-400">Preço mensal (R$)<input type="number" min="0" step="0.01" value={plan.price} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],price:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label><label className="text-xs text-zinc-400">Créditos por ciclo<input type="number" min="0" value={plan.coinsPerMonth} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current = true; setPlans(v=>({...v,[key]:{...v[key],coinsPerMonth:Number(e.target.value)}}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label></article>)}<div className="grid gap-3 sm:grid-cols-3">{Object.entries(costs).map(([kind,cost])=><label key={kind} className="text-xs text-zinc-400">{kind === 'text' ? 'Créditos por texto/cena' : kind === 'image' ? 'Créditos por imagem' : 'Créditos por análise de áudio'}<input type="number" min={1} max={1000000} value={cost} disabled={Boolean(busyAction)} onChange={e=>{plansDirty.current=true;setCosts(current=>({...current,[kind]:Number(e.target.value)}));}} className="mt-1 block w-full rounded bg-zinc-800 p-2 text-white"/></label>)}</div><button disabled={Boolean(busyAction)} onClick={()=>void savePlans()} className="rounded-lg bg-lime-300 px-4 py-2 font-semibold text-black">{busyAction === 'plans' ? 'Salvando…' : 'Salvar planos'}</button><p className="text-xs text-zinc-500">Pagamento manual no Admin. Texto, imagem, áudio e cada cena usam custos diferentes. Créditos reservados ao iniciar e estornados em caso de falha. Pro e Premium reservam 20 GB por conta quando o armazenamento estiver ativado.</p></div>}
+    {tab === 'settings' && <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300">Projeto Firebase: gen-lang-client-0704234685<br/>Banco: ai-studio-23b8da44-a156-4670-8dcd-03a6cf972fab<br/>Pix automático: Mercado Pago ainda não conectado. Confirmação manual disponível na aba Pagamentos.<br/>Eventos e alterações são registrados no Firestore.</div>}
   </section>;
 };

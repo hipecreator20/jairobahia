@@ -20,7 +20,7 @@ import { GeminiStatusInfo } from '../types';
 import { WalletPanel } from '../components/common/WalletPanel';
 
 export const Settings: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, isOwner } = useAuth();
 
   // Gemini state
   const [geminiStatus, setGeminiStatus] = useState<GeminiStatusInfo | null>(null);
@@ -155,12 +155,12 @@ export const Settings: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* ---------------------------------------------------- */}
-        {/* Card 1: Informações do Proprietário                 */}
+        {/* Card 1: Informações da Conta                 */}
         {/* ---------------------------------------------------- */}
         <div className="bg-[#141414] border border-[#242424] rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-[#222]">
             <ShieldCheck className="w-5 h-5 text-[#DFFF00]" />
-            <h2 className="text-sm font-bold text-white">Informações do Proprietário</h2>
+            <h2 className="text-sm font-bold text-white">Informações da Conta</h2>
           </div>
 
           <div className="flex items-center gap-4">
@@ -175,7 +175,7 @@ export const Settings: React.FC = () => {
               <p className="text-xs text-zinc-400">{user?.email || profile?.email || AUTHORIZED_OWNER_EMAIL}</p>
               <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DFFF00]/10 text-[#DFFF00] text-[11px] font-semibold">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Proprietário Único Autorizado</span>
+                <span>{isOwner ? 'Administrador Master' : profile?.status === 'approved' ? 'Membro aprovado' : 'Acesso pendente'}</span>
               </div>
             </div>
           </div>
@@ -189,11 +189,11 @@ export const Settings: React.FC = () => {
             </div>
             <div className="flex justify-between py-1">
               <span>Política de Acesso:</span>
-              <span className="text-zinc-300 font-medium">Mono-usuário (Privado)</span>
+              <span className="text-zinc-300 font-medium">Acesso por aprovação</span>
             </div>
             <div className="flex justify-between py-1">
               <span>Cadastro Público:</span>
-              <span className="text-emerald-400 font-medium">Bloqueado</span>
+              <span className="text-emerald-400 font-medium">Google · sujeito à aprovação</span>
             </div>
           </div>
         </div>
